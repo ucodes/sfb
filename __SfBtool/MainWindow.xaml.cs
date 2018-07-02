@@ -72,34 +72,48 @@ namespace SfBtool
  private void PSconnection()
         {
             string returnstring="";
-            string password = "";
-            string userName = "";
+            string password = "123qwerty=";
+            string userName = "lynclab.com\\andrew";
             System.Uri uri = new Uri("https://192.168.1.134/ocspowershell");
             System.Security.SecureString securePassword = String2SecureString(password);
 
             PSCredential creds = new PSCredential(userName, securePassword);
+/*
+            var option = new PSSessionOption();            // Create the PSSessionOption instance
+            option.IdleTimeout = TimeSpan.FromMinutes(60); // Set the IdleTimeout using a TimeSpan object
+            WSManConnectionInfo ci = new WSManConnectionInfo();
+                ci.SetSessionOptions(option);
 
-            runspace = RunspaceFactory.CreateRunspace();
- 
+            runspace = RunspaceFactory.CreateRunspace(ci);
+ */
 
             PowerShell powershell = PowerShell.Create();
             PSCommand command = new PSCommand();
-            command.AddCommand("New-PSSession");
-            command.AddParameter("ConnectionUri", uri);
-            command.AddParameter("Credential", creds);
-            command.AddParameter("Authentication", "Default");
+            command.AddCommand("get-command");
+          //  command.AddParameter("ConnectionUri", uri);
+          //  command.AddParameter("Credential", creds);
+           // command.AddParameter("Authentication", "Default");
             PSSessionOption sessionOption = new PSSessionOption();
             sessionOption.SkipCACheck = true;
             sessionOption.SkipCNCheck = true;
             sessionOption.SkipRevocationCheck = true;
-            TimeSpan ts = TimeSpan.FromMinutes(1);
+            TimeSpan ts = TimeSpan.FromMinutes(24);
             sessionOption.IdleTimeout = ts;
             sessionOption.CancelTimeout = ts;
             sessionOption.OperationTimeout = ts;
             sessionOption.OpenTimeout = ts;
-            command.AddParameter("SessionOption", sessionOption);
+          //  command.AddParameter("SessionOption", sessionOption);
 
             powershell.Commands = command;
+
+            WSManConnectionInfo ci = new WSManConnectionInfo();
+            ci.SetSessionOptions(sessionOption);
+
+            ci.Credential = creds;
+            ci.ConnectionUri = uri;
+            ci.Scheme = "https";
+            runspace = RunspaceFactory.CreateRunspace(ci);
+
 
             try
             {
@@ -108,7 +122,7 @@ namespace SfBtool
 
                 // associate the runspace with powershell
                 powershell.Runspace = runspace;
-
+/*
                 // invoke the powershell to obtain the results
                 Collection<PSSession> result = powershell.Invoke<PSSession>();
 
@@ -192,7 +206,7 @@ namespace SfBtool
                     return;
                 }
 
-                // Retrieve server info
+             */   // Retrieve server info
                 powershell = PowerShell.Create();
                 command = new PSCommand();
                 command.AddScript("Get-CsWindowsService RTCSRV | Select-Object *");
@@ -211,9 +225,9 @@ namespace SfBtool
                     return;
                 }
                
-                //successfull connection
+        /*        //successfull connection
                 if (powershell.Streams.Error.Count == 0)
-                {
+                {*/
                     AppendMainText("Successfully connected to " + 
                             results.First().Properties["MachineName"].Value.ToString() + " .Search for a user and " +
                                     "change required attributes" + ".\n");
@@ -226,7 +240,7 @@ namespace SfBtool
                     UpdateButton("ViewMobilityPolicyButton", true, "");
                     UpdateButton("ViewVoicePolicyButton", true, "");
 
-                }
+             }/*
 
                 //unsuccessfull connection (the error will be returned in finally block)
                 else
@@ -235,7 +249,7 @@ namespace SfBtool
                 }
 
             }
-
+            */
             catch (Exception ex)
             {
                 returnstring += "Following exception happened while connecting to remote PS:\n";
@@ -392,8 +406,8 @@ private static SecureString String2SecureString(string password)
             GetPolicyInfo();
 
             Collection<PSObject> results = new Collection<PSObject>();
-            results = PSExecute("Get-CsUser -Filter{SipAddress -like \"*" + 
-                                    SearchUserTextBox.Text + "*\"}");
+            results = PSExecute("Get-CsUser");// -Filter{SipAddress -like \"*" + 
+                                  //  SearchUserTextBox.Text + "*\"}");
             //check whether more than one user was found
             if (results.Count > 1)
             {
@@ -550,8 +564,8 @@ private static SecureString String2SecureString(string password)
         private void ViewVoicePolicyButton_Click(object sender, RoutedEventArgs e)
         {
             PSObject result = new PSObject();
-            result = PSExecute("Get-CsVoicePolicy -Identity " +
-                        VoicePolicyComboBox.SelectedValue.ToString()).First();
+            result = PSExecute("Get-CsVoicePolicy").First();// -Identity " +
+                       // VoicePolicyComboBox.SelectedValue.ToString()).First();
             AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
                           + " policy:\n");
             //MainText.AppendText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
