@@ -1,17 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Management.Automation;
 using System.Collections.ObjectModel;
 using System.Management.Automation.Runspaces;
@@ -33,6 +24,9 @@ namespace SfBtool
 
         RunspaceState IsOpened;// = runspace.RunspaceStateInfo.State;//== RunspaceState.Opened;
 
+        //timer to prevent PS session timeout
+        System.Timers.Timer Idletimer = new System.Timers.Timer(45 * 1000);
+
         static bool ConnectionFlag = false;
 
         //user attributes
@@ -41,6 +35,8 @@ namespace SfBtool
         Hashtable UserPolicies = new Hashtable();
         bool EnterpriseVoiceEnabled;
 
+        string password;
+        string userName;
 
         public MainWindow()
         {
@@ -49,6 +45,14 @@ namespace SfBtool
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+
+
+            // show login window;
+            LoginWindow subWindow = new LoginWindow();
+            subWindow.Owner = this;
+            subWindow.ShowDialog();
+
+
             /*
             if (ConnectionFlag)
             {
@@ -57,23 +61,27 @@ namespace SfBtool
             }
             */
 
-            ConnectButton.Content = "Connecting...";
-            ConnectButton.IsEnabled = false;
-            MainText.AppendText("Connecting to remote PowerShell, wait...\n");
+            //Ok button clicked on login window
+            if (subWindow.Confirmed)
+            {
+                password = subWindow.Password;
+                userName = subWindow.Login;
+                ConnectButton.Content = "Connecting...";
+                ConnectButton.IsEnabled = false;
+                MainText.AppendText("Connecting to remote PowerShell, wait...\n");
 
-            //create background thread and start PSconnection   
-            Thread t1 = new Thread(new ThreadStart(PSconnection));
-            t1.Start();
+                //create background thread and start PSconnection   
+                Thread t1 = new Thread(new ThreadStart(PSconnection));
+                t1.Start();
 
-
-
+            }
         }
 
  private void PSconnection()
         {
+
             string returnstring="";
-            string password = "";
-            string userName = "";
+
             System.Uri uri = new Uri("https://192.168.1.134/ocspowershell");
             System.Security.SecureString securePassword = String2SecureString(password);
 
@@ -103,7 +111,7 @@ namespace SfBtool
 
             try
             {
-                // open the remote runspace
+                // open the runspace (connect to local powershell)
                 runspace.Open();
 
                 // associate the runspace with powershell
@@ -175,7 +183,7 @@ namespace SfBtool
                     return;
                 }
 
-                // First import the cmdlets in the current runspace (using Import-PSSession)
+                //  import Lync cmdlets from the remote server in the current local runspace (using Import-PSSession)
                 powershell = PowerShell.Create();
                 command = new PSCommand();
                 command.AddScript("Import-PSSession -Session $ra");
@@ -218,6 +226,7 @@ namespace SfBtool
                             results.First().Properties["MachineName"].Value.ToString() + " .Search for a user and " +
                                     "change required attributes" + ".\n");
                     ConnectionFlag = true;
+                    //enable buttons
                     UpdateButton("ConnectButton", false, "Connected");
                     UpdateButton("SearchButton", true, "");
                     UpdateButton("ViewConferencingPolicyButton", true, "");
@@ -225,6 +234,11 @@ namespace SfBtool
                     UpdateButton("ViewHostedVoicemailPolicyButton", true, "");
                     UpdateButton("ViewMobilityPolicyButton", true, "");
                     UpdateButton("ViewVoicePolicyButton", true, "");
+
+                    //start timer to prevent a session timeout
+                    Idletimer.Elapsed += new System.Timers.ElapsedEventHandler(OnElapsed);
+                    Idletimer.AutoReset = false;
+                    Idletimer.Start();
 
                 }
 
@@ -265,8 +279,13 @@ namespace SfBtool
             }
         }
 
- //retrive policies info to fill combo boxes items  
- private void GetPolicyInfo()
+        private void Idletimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        //retrive policies info to fill combo boxes items  
+        private void GetPolicyInfo()
         {
             Collection<PSObject> results = new Collection<PSObject>();
 
@@ -642,6 +661,15 @@ private static SecureString String2SecureString(string password)
                 }
             }
         }
+
+        //run command on a remote server to prevent a session timeout
+        private void OnElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            PSExecute("get-cssipdomain");
+           // AppendMainText("timer called");
+            Idletimer.Start(); // Restart timer
+        }
+
 
     }
 
