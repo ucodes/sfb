@@ -22,8 +22,6 @@ namespace SfBtool
         //declare runspace for powershell
         static Runspace runspace;
 
-        RunspaceState IsOpened;// = runspace.RunspaceStateInfo.State;//== RunspaceState.Opened;
-
         //timer to prevent PS session timeout
         System.Timers.Timer Idletimer = new System.Timers.Timer(45 * 1000);
 
@@ -62,7 +60,8 @@ namespace SfBtool
             */
 
             //Ok button clicked on login window
-            if (subWindow.Confirmed)
+            if (subWindow.Confirmed && !String.IsNullOrEmpty(subWindow.Password) 
+                               && !String.IsNullOrEmpty(subWindow.Login))
             {
                 password = subWindow.Password;
                 userName = subWindow.Login;
@@ -226,14 +225,9 @@ namespace SfBtool
                             results.First().Properties["MachineName"].Value.ToString() + " .Search for a user and " +
                                     "change required attributes" + ".\n");
                     ConnectionFlag = true;
-                    //enable buttons
+                    //update buttons
                     UpdateButton("ConnectButton", false, "Connected");
                     UpdateButton("SearchButton", true, "");
-                    UpdateButton("ViewConferencingPolicyButton", true, "");
-                    UpdateButton("ViewExternalAccessPolicyButton", true, "");
-                    UpdateButton("ViewHostedVoicemailPolicyButton", true, "");
-                    UpdateButton("ViewMobilityPolicyButton", true, "");
-                    UpdateButton("ViewVoicePolicyButton", true, "");
 
                     //start timer to prevent a session timeout
                     Idletimer.Elapsed += new System.Timers.ElapsedEventHandler(OnElapsed);
@@ -407,6 +401,25 @@ private static SecureString String2SecureString(string password)
         //search button click
         private void Button_Click_2(object sender, RoutedEventArgs e)
         {
+            //clean attributes from previous user
+            UserPolicies.Clear();
+            SipAddress = "";
+            RegistrarPool = "";
+            LineURI = "";
+            EnterpriseVoiceEnabled = false;
+
+            //update UI
+            UpdateUIwithUserAttributes();
+
+            //disable functional buttons
+            UpdateButton("ViewConferencingPolicyButton", false, "");
+            UpdateButton("ViewExternalAccessPolicyButton", false, "");
+            UpdateButton("ViewHostedVoicemailPolicyButton", false, "");
+            UpdateButton("ViewMobilityPolicyButton", false, "");
+            UpdateButton("ViewVoicePolicyButton", false, "");
+            UpdateButton("UpdateUserButton", false, "");
+            UpdateButton("ResetPinButton", false, "");
+            
             //retrive policies info to fill combo boxes items  
             GetPolicyInfo();
 
@@ -428,8 +441,6 @@ private static SecureString String2SecureString(string password)
             //one user is expected
             else if (results.Count == 1)
             {
-                //clean policies from previous user
-                UserPolicies.Clear();
 
                 //show all user info in the main box
                 AppendMainText("\nAll attributes of found user:" + "\n");
@@ -449,11 +460,6 @@ private static SecureString String2SecureString(string password)
                     EnterpriseVoiceEnabled = true;
                 }
                 LineURI = results.First().Properties["LineURI"].Value.ToString();
-
-                SipAddressTextBox.Text = SipAddress;
-                RegistrarPoolTextBlock.Text = RegistrarPool;
-                LineURITextBox.Text = LineURI;
-                EnterpriseVoiceEnabledCheckBox.IsChecked = EnterpriseVoiceEnabled;
 
                 //get effective user policies
                 results = PSExecute("Get-CsEffectivePolicy " + SipAddress);
@@ -478,13 +484,17 @@ private static SecureString String2SecureString(string password)
                     }
                 }
 
+                //update UI
+                UpdateUIwithUserAttributes();
 
-                //select effective policies for current user in the comboboxes
-                ConferencingPolicyComboBox.SelectedValue = UserPolicies["ConferencingPolicy"];
-                VoicePolicyComboBox.SelectedValue = UserPolicies["VoicePolicy"];
-                ExternalAccessPolicyComboBox.SelectedValue = UserPolicies["ExternalAccessPolicy"];
-                HostedVoicemailPolicyComboBox.SelectedValue = UserPolicies["HostedVoicemailPolicy"];
-                MobilityPolicyComboBox.SelectedValue = UserPolicies["MobilityPolicy"];
+                //enable functional buttons
+                UpdateButton("ViewConferencingPolicyButton", true, "");
+                UpdateButton("ViewExternalAccessPolicyButton", true, "");
+                UpdateButton("ViewHostedVoicemailPolicyButton", true, "");
+                UpdateButton("ViewMobilityPolicyButton", true, "");
+                UpdateButton("ViewVoicePolicyButton", true, "");
+                UpdateButton("UpdateUserButton", true, "");
+                UpdateButton("ResetPinButton", true, "");
 
             }
 
@@ -494,10 +504,12 @@ private static SecureString String2SecureString(string password)
             }
         }
 
-        private void TestButton_Click(object sender, RoutedEventArgs e)
+        private void UpdateUserButton_Click(object sender, RoutedEventArgs e)
         {
-            IsOpened = runspace.RunspaceStateInfo.State;
-            MessageBox.Show(IsOpened.ToString(), "My App", MessageBoxButton.OK, MessageBoxImage.Information);
+            
+            MessageBox.Show("Do you really want to change following attributes for the " + SipAddress + " user?", 
+                "Confirm", MessageBoxButton.OKCancel,
+                MessageBoxImage.Information, MessageBoxResult.Cancel);
         }
 
         /*
@@ -642,7 +654,6 @@ private static SecureString String2SecureString(string password)
               );
         }
 
-       
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
 
@@ -670,6 +681,35 @@ private static SecureString String2SecureString(string password)
             Idletimer.Start(); // Restart timer
         }
 
+
+        private void UpdateUIwithUserAttributes()
+        {
+
+            SipAddressTextBox.Text = SipAddress;
+            RegistrarPoolTextBlock.Text = RegistrarPool;
+            LineURITextBox.Text = LineURI;
+            EnterpriseVoiceEnabledCheckBox.IsChecked = EnterpriseVoiceEnabled;
+
+            if (UserPolicies != null)
+            {
+                //select effective policies for current user in the comboboxes
+                ConferencingPolicyComboBox.SelectedValue = UserPolicies["ConferencingPolicy"];
+                VoicePolicyComboBox.SelectedValue = UserPolicies["VoicePolicy"];
+                ExternalAccessPolicyComboBox.SelectedValue = UserPolicies["ExternalAccessPolicy"];
+                HostedVoicemailPolicyComboBox.SelectedValue = UserPolicies["HostedVoicemailPolicy"];
+                MobilityPolicyComboBox.SelectedValue = UserPolicies["MobilityPolicy"];
+            }
+
+            //select first value in comboboxes if the user policies are empty
+            else
+            {
+                ConferencingPolicyComboBox.SelectedIndex = 0;
+                VoicePolicyComboBox.SelectedIndex = 0;
+                ExternalAccessPolicyComboBox.SelectedIndex = 0;
+                HostedVoicemailPolicyComboBox.SelectedIndex = 0;
+                MobilityPolicyComboBox.SelectedIndex = 0;
+            }
+        }
 
     }
 
