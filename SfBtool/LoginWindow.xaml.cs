@@ -47,8 +47,19 @@ namespace SfBtool
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            Confirmed = true;
-            this.Close();
+            if (!String.IsNullOrEmpty(LoginTextBox.Text)
+                   && !String.IsNullOrEmpty(PasswordTextBox.Password))
+            {
+                Confirmed = true;
+                this.Close();
+            }
+           
+            else
+            {
+                MessageBox.Show("Empty login or password", "Enter valid login and password", MessageBoxButton.OK,
+                        MessageBoxImage.Warning, MessageBoxResult.OK);
+            }
+
         }
     }
 }

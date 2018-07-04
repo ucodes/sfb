@@ -28,13 +28,13 @@ namespace SfBtool
         static bool ConnectionFlag = false;
 
         //user attributes
-        string SipAddress, RegistrarPool, LineURI;
+        string Identity, SipAddress, RegistrarPool, LineURI;
 
         Hashtable UserPolicies = new Hashtable();
         bool EnterpriseVoiceEnabled;
 
-        string password;
-        string userName;
+        private string password;
+        private string userName;
 
         public MainWindow()
         {
@@ -43,7 +43,6 @@ namespace SfBtool
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-
 
             // show login window;
             LoginWindow subWindow = new LoginWindow();
@@ -403,6 +402,7 @@ private static SecureString String2SecureString(string password)
         {
             //clean attributes from previous user
             UserPolicies.Clear();
+            Identity = "";
             SipAddress = "";
             RegistrarPool = "";
             LineURI = "";
@@ -451,8 +451,8 @@ private static SecureString String2SecureString(string password)
                     //MainText.AppendText(PSpr.Name + " " + PSpr.Value + "\n");
                 }
 
-                //fill neccessary attributes in action block (left section)
-
+                //get user info
+                Identity = results.First().Properties["Identity"].Value.ToString();
                 SipAddress = results.First().Properties["SipAddress"].Value.ToString();
                 RegistrarPool = results.First().Properties["RegistrarPool"].Value.ToString();
                 if (results.First().Properties["EnterpriseVoiceEnabled"].Value.ToString() == "True")
@@ -462,7 +462,7 @@ private static SecureString String2SecureString(string password)
                 LineURI = results.First().Properties["LineURI"].Value.ToString();
 
                 //get effective user policies
-                results = PSExecute("Get-CsEffectivePolicy " + SipAddress);
+                results = PSExecute("Get-CsEffectivePolicy -Identity '" + Identity + "'");
                 UserPolicies.Add("ConferencingPolicy", results.First().Properties["ConferencingPolicy"].Value.ToString());
                 UserPolicies.Add("VoicePolicy", results.First().Properties["VoicePolicy"].Value.ToString());
                 UserPolicies.Add("ExternalAccessPolicy", results.First().Properties["ExternalAccessPolicy"].Value.ToString());
@@ -484,7 +484,7 @@ private static SecureString String2SecureString(string password)
                     }
                 }
 
-                //update UI
+                //update UI (fill neccessary attributes in action block (left section))
                 UpdateUIwithUserAttributes();
 
                 //enable functional buttons
@@ -506,10 +506,90 @@ private static SecureString String2SecureString(string password)
 
         private void UpdateUserButton_Click(object sender, RoutedEventArgs e)
         {
-            
-            MessageBox.Show("Do you really want to change following attributes for the " + SipAddress + " user?", 
-                "Confirm", MessageBoxButton.OKCancel,
-                MessageBoxImage.Information, MessageBoxResult.Cancel);
+            bool IsSipAddressChanged = false,
+                 //   IsRegistrarPoolChanged = false, 
+                 IsLineURIChanged = false,
+                 IsEnterpriseVoiceEnabledChanged = false,
+                 IsConferencingPolicyChanged = false,
+                 IsVoicePolicyChanged = false,
+                 IsExternalAccessPolicyChanged = false,
+                 IsHostedVoicemailPolicyChanged = false,
+                 IsMobilityPolicyChanged = false;
+            string ChangedAttr = "";
+
+            //check which attributes have been changed
+            if (SipAddressTextBox.Text != (String.IsNullOrEmpty(SipAddress) ? SipAddress : SipAddress.Remove(0, 4)))
+            {
+                ChangedAttr += "\nSip address from " + SipAddress + " to sip:" + SipAddressTextBox.Text + "\n";
+                IsSipAddressChanged = true;
+            }
+
+            //if (RegistrarPoolTextBlock.Text == RegistrarPool);
+
+            if (LineURITextBox.Text != (String.IsNullOrEmpty(LineURI) ? LineURI : LineURI.Remove(0, 4)))
+            {
+                ChangedAttr += "\nLine URI from " + LineURI + " to tel:" + LineURITextBox.Text + "\n";
+                IsLineURIChanged = true;
+            }
+
+            if (EnterpriseVoiceEnabledCheckBox.IsChecked != EnterpriseVoiceEnabled)
+            {
+                ChangedAttr += "\nEV Enabled from " + EnterpriseVoiceEnabled.ToString() + " to " + EnterpriseVoiceEnabledCheckBox.IsChecked.ToString() + "\n";
+                IsEnterpriseVoiceEnabledChanged = true;
+            }
+
+            //check conf pol
+            if (ConferencingPolicyComboBox.SelectedValue != UserPolicies["ConferencingPolicy"])
+            {
+                ChangedAttr += "\nConf policy from " + UserPolicies["ConferencingPolicy"] + " to " + ConferencingPolicyComboBox.SelectedValue + "\n";
+                IsConferencingPolicyChanged = true;
+            }
+
+            //voice pol
+            if (VoicePolicyComboBox.SelectedValue != UserPolicies["VoicePolicy"])
+            {
+                ChangedAttr += "\nVoice policy from " + UserPolicies["VoicePolicy"] + " to " + VoicePolicyComboBox.SelectedValue + "\n";
+                IsVoicePolicyChanged = true;
+            }
+
+            //ExternalAccess
+            if (ExternalAccessPolicyComboBox.SelectedValue != UserPolicies["ExternalAccessPolicy"])
+            {
+                ChangedAttr += "\nExternal Access policy from " + UserPolicies["ExternalAccessPolicy"] + " to " + ExternalAccessPolicyComboBox.SelectedValue + "\n";
+                IsExternalAccessPolicyChanged = true;
+            }
+
+            //HostedVM
+            if (HostedVoicemailPolicyComboBox.SelectedValue != UserPolicies["HostedVoicemailPolicy"])
+            {
+                ChangedAttr += "\nHosted VM policy from " + UserPolicies["HostedVoicemailPolicy"] + " to " + HostedVoicemailPolicyComboBox.SelectedValue + "\n";
+                IsHostedVoicemailPolicyChanged = true;
+            }
+
+            //mobility pol
+            if (MobilityPolicyComboBox.SelectedValue != UserPolicies["MobilityPolicy"])
+            {
+                ChangedAttr += "\nMobility policy from " + UserPolicies["MobilityPolicy"] + " to " + MobilityPolicyComboBox.SelectedValue + "\n";
+                IsMobilityPolicyChanged = true;
+            }
+
+            //if confirmed, run set-csuser and\ or grant policies
+            if (MessageBox.Show("Do you really want to change following attributes for the " 
+                + SipAddress + " user?\n" + ChangedAttr, 
+                "Confirm",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information, MessageBoxResult.No) == MessageBoxResult.Yes)
+                {
+                    if (IsSipAddressChanged){ /*-Identity '" + Identity + "'" */}
+                    if (IsLineURIChanged) { }
+                    if (IsEnterpriseVoiceEnabledChanged) { }
+                    if (IsConferencingPolicyChanged) { }
+                    if (IsVoicePolicyChanged) { }
+                    if (IsExternalAccessPolicyChanged) { }
+                    if (IsHostedVoicemailPolicyChanged) { }
+                    if (IsMobilityPolicyChanged) { }
+
+            }
         }
 
         /*
@@ -673,6 +753,27 @@ private static SecureString String2SecureString(string password)
             }
         }
 
+        private void ResetPinButton_Click(object sender, RoutedEventArgs e)
+        {
+
+            EnterPIN pinwindow = new EnterPIN();
+            pinwindow.Owner = this;
+            pinwindow.ShowDialog();
+
+            //check whether Pin was entered and isnt null
+            if (pinwindow.PinEntered && !String.IsNullOrEmpty(pinwindow.Pin))
+            {
+                PSObject result = new PSObject();
+                result = PSExecute("Set-CsClientPin -Pin " + pinwindow.Pin + " -Identity '" + Identity + "'").First();
+                AppendMainText(String.Format("\nThe pin reset for {0}\nPin: {1}\nPinReset: {2}", result.Properties["Identity"].Value.ToString(),
+                result.Properties["Pin"].Value.ToString(),
+                result.Properties["PinReset"].Value.ToString()));
+
+            }
+      
+
+        }
+
         //run command on a remote server to prevent a session timeout
         private void OnElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
@@ -684,10 +785,11 @@ private static SecureString String2SecureString(string password)
 
         private void UpdateUIwithUserAttributes()
         {
-
-            SipAddressTextBox.Text = SipAddress;
+            //remove "sip:" prefix if the string isnt empty 
+            SipAddressTextBox.Text = String.IsNullOrEmpty(SipAddress) ?  SipAddress : SipAddress.Remove(0, 4);
             RegistrarPoolTextBlock.Text = RegistrarPool;
-            LineURITextBox.Text = LineURI;
+            //remove "tel:" prefix if the string isnt empty 
+            LineURITextBox.Text = String.IsNullOrEmpty(LineURI) ? LineURI : LineURI.Remove(0, 4);
             EnterpriseVoiceEnabledCheckBox.IsChecked = EnterpriseVoiceEnabled;
 
             if (UserPolicies != null)
