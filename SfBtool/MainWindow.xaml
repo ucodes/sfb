@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:SfBtool"
         mc:Ignorable="d"
         Title="SfB user management tool" Height="450" Width="800"
-         ResizeMode="CanMinimize" >
+        ResizeMode="CanMinimize" >
     <Grid Margin="0,0,-0.4,-70">
         <Button x:Name="ConnectButton" Content="Connect" HorizontalAlignment="Left" Height="35" Margin="20,36,0,0" VerticalAlignment="Top" Width="193" Click="Button_Click"/>
         <TextBox x:Name="MainText" HorizontalAlignment="Left" Height="354" Margin="437,36,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="324" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" 

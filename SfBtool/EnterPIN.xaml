@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SfBtool"
         mc:Ignorable="d"
-        Title="EnterPIN" Height="198.027" Width="250.615">
+        Title="EnterPIN" Height="198.027" Width="250.615"
+        ResizeMode="NoResize" >
     <Grid>
         <Button Content="Reset" HorizontalAlignment="Left" Height="26" Margin="23,108,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
         <Button Content="Cancel" HorizontalAlignment="Left" Height="26" Margin="137,108,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click_1"/>

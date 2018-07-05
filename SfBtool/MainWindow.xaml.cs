@@ -49,15 +49,6 @@ namespace SfBtool
             subWindow.Owner = this;
             subWindow.ShowDialog();
 
-
-            /*
-            if (ConnectionFlag)
-            {
-                MainText.AppendText("PS connection has been already established\n");
-                return;
-            }
-            */
-
             //Ok button clicked on login window
             if (subWindow.Confirmed && !String.IsNullOrEmpty(subWindow.Password) 
                                && !String.IsNullOrEmpty(subWindow.Login))
@@ -71,7 +62,6 @@ namespace SfBtool
                 //create background thread and start PSconnection   
                 Thread t1 = new Thread(new ThreadStart(PSconnection));
                 t1.Start();
-
             }
         }
 
@@ -86,7 +76,6 @@ namespace SfBtool
             PSCredential creds = new PSCredential(userName, securePassword);
 
             runspace = RunspaceFactory.CreateRunspace();
- 
 
             PowerShell powershell = PowerShell.Create();
             PSCommand command = new PSCommand();
@@ -131,7 +120,6 @@ namespace SfBtool
                 {
                     returnstring += "Couldnt connect to Front End or unexpected number " +
                         "of Remote Runspace connections returned" + "\n";
-                   // return returnstring;
                     //throw new Exception("Unexpected number of Remote Runspace connections returned.");
                 }
 
@@ -249,7 +237,6 @@ namespace SfBtool
                 returnstring += "Exception: " + ex.Message.ToString() + "\n";
             }
 
-
             finally
             {
 
@@ -356,23 +343,15 @@ namespace SfBtool
 
             foreach (ErrorRecord current in powershell.Streams.Error)
                 {
-                    AppendMainText("PSExecute error start\n");
+                    AppendMainText("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\nPSExecute error start\n");
                     AppendMainText("Exception: " + current.Exception.ToString() + "\n");
                     AppendMainText("Inner Exception: " + current.Exception.InnerException + "\n");
-                    AppendMainText("PSExecute error end\n");
+                    AppendMainText("PSExecute error end\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
                     return null;
                 }
 
                 return results;
 
-            /*
-            foreach (PSObject PSresult in results)
-            {
-                MainText.AppendText(PSresult.Methods.ToList().ToString());
-                MainText.AppendText(PSresult.Properties["Name"].Value.ToString() + "\n");
-                MainText.AppendText(PSresult.Properties["sipaddress"].Value.ToString() + "\n");
-            }
-            */
         }
 
             catch (Exception ex)
@@ -392,8 +371,6 @@ namespace SfBtool
                 // up any resources.
                 //powershell.Dispose();
                 // powershell = null;    
-               // ConnectButton.Content = "Connected";
-               // MainText.AppendText("Execution called\n");
          }
     }
 
@@ -402,7 +379,6 @@ private static SecureString String2SecureString(string password)
             SecureString remotePassword = new SecureString();
             for (int i = 0; i < password.Length; i++)
                 remotePassword.AppendChar(password[i]);
-
             return remotePassword;
         }
 
@@ -481,7 +457,6 @@ private static SecureString String2SecureString(string password)
 
                     //change site policy name from "Site:siteID"  to "Site:siteName"
                     List<string> _keys = new List<string>(UserPolicies.Keys.Cast<string>());
-                    //_keys = UserPolicies;
 
                     foreach (string policy in _keys)
                     {
@@ -503,7 +478,7 @@ private static SecureString String2SecureString(string password)
                     UpdateButton("ViewHostedVoicemailPolicyButton", true, "");
                     UpdateButton("ViewMobilityPolicyButton", true, "");
                     UpdateButton("ViewVoicePolicyButton", true, "");
-                    UpdateButton("UpdateUserButton", true, "");
+                    UpdateButton("UpdateUserButton", true, "Update");
                     UpdateButton("ResetPinButton", true, "");
 
                 }
@@ -553,87 +528,233 @@ private static SecureString String2SecureString(string password)
 
             if (EnterpriseVoiceEnabledCheckBox.IsChecked != EnterpriseVoiceEnabled)
             {
-                ChangedAttr += "\nEV Enabled from " + EnterpriseVoiceEnabled.ToString() + " to " + EnterpriseVoiceEnabledCheckBox.IsChecked.ToString() + "\n";
+                ChangedAttr += "\nEV Enabled from " + EnterpriseVoiceEnabled.ToString() + 
+                    " to " + EnterpriseVoiceEnabledCheckBox.IsChecked.ToString() + "\n";
                 IsEnterpriseVoiceEnabledChanged = true;
             }
 
             //check conf pol
             if (ConferencingPolicyComboBox.SelectedValue != UserPolicies["ConferencingPolicy"])
             {
-                ChangedAttr += "\nConf policy from " + UserPolicies["ConferencingPolicy"] + " to " + ConferencingPolicyComboBox.SelectedValue + "\n";
+                ChangedAttr += "\nConf policy from " + UserPolicies["ConferencingPolicy"] + 
+                    " to " + ConferencingPolicyComboBox.SelectedValue + "\n";
                 IsConferencingPolicyChanged = true;
             }
 
             //voice pol
             if (VoicePolicyComboBox.SelectedValue != UserPolicies["VoicePolicy"])
             {
-                ChangedAttr += "\nVoice policy from " + UserPolicies["VoicePolicy"] + " to " + VoicePolicyComboBox.SelectedValue + "\n";
+                ChangedAttr += "\nVoice policy from " + UserPolicies["VoicePolicy"] + 
+                    " to " + VoicePolicyComboBox.SelectedValue + "\n";
                 IsVoicePolicyChanged = true;
             }
 
             //ExternalAccess
             if (ExternalAccessPolicyComboBox.SelectedValue != UserPolicies["ExternalAccessPolicy"])
             {
-                ChangedAttr += "\nExternal Access policy from " + UserPolicies["ExternalAccessPolicy"] + " to " + ExternalAccessPolicyComboBox.SelectedValue + "\n";
+                ChangedAttr += "\nExternal Access policy from " + UserPolicies["ExternalAccessPolicy"] + 
+                    " to " + ExternalAccessPolicyComboBox.SelectedValue + "\n";
                 IsExternalAccessPolicyChanged = true;
             }
 
             //HostedVM
             if (HostedVoicemailPolicyComboBox.SelectedValue != UserPolicies["HostedVoicemailPolicy"])
             {
-                ChangedAttr += "\nHosted VM policy from " + UserPolicies["HostedVoicemailPolicy"] + " to " + HostedVoicemailPolicyComboBox.SelectedValue + "\n";
+                ChangedAttr += "\nHosted VM policy from " + UserPolicies["HostedVoicemailPolicy"] + 
+                    " to " + HostedVoicemailPolicyComboBox.SelectedValue + "\n";
                 IsHostedVoicemailPolicyChanged = true;
             }
 
             //mobility pol
             if (MobilityPolicyComboBox.SelectedValue != UserPolicies["MobilityPolicy"])
             {
-                ChangedAttr += "\nMobility policy from " + UserPolicies["MobilityPolicy"] + " to " + MobilityPolicyComboBox.SelectedValue + "\n";
+                ChangedAttr += "\nMobility policy from " + UserPolicies["MobilityPolicy"] +
+                    " to " + MobilityPolicyComboBox.SelectedValue + "\n";
                 IsMobilityPolicyChanged = true;
             }
 
-            //if confirmed, run set-csuser and\ or grant policies
-            if (MessageBox.Show("Do you really want to change following attributes for the " 
-                + SipAddress + " user?\n" + ChangedAttr, 
-                "Confirm",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Information, MessageBoxResult.No) == MessageBoxResult.Yes)
-                {
-                    if (IsSipAddressChanged){ /*-Identity '" + Identity + "'" */}
-                    if (IsLineURIChanged) { }
-                    if (IsEnterpriseVoiceEnabledChanged) { }
-                    if (IsConferencingPolicyChanged) { }
-                    if (IsVoicePolicyChanged) { }
-                    if (IsExternalAccessPolicyChanged) { }
-                    if (IsHostedVoicemailPolicyChanged) { }
-                    if (IsMobilityPolicyChanged) { }
-
-            }
-        }
-
-        /*
-                //>>>>>>>>>>>>>>>>>>>>
-                private void UpdateButton(string updatestring)
-                {
-
-                    //  Updater uiUpdater = new Updater(UpdateUI);
-                    // Dispatcher.BeginInvoke(DispatcherPriority.Send, uiUpdater, "Wait...");
-
-                    //Dispatcher for MainWindow for updating UI
-                    Dispatcher.BeginInvoke(DispatcherPriority.Normal,(ThreadStart)delegate ()
+            //start dialog if any of attributes were changed
+            if (IsSipAddressChanged ||
+               IsLineURIChanged ||
+               IsEnterpriseVoiceEnabledChanged ||
+               IsConferencingPolicyChanged ||
+               IsVoicePolicyChanged ||
+               IsExternalAccessPolicyChanged ||
+               IsHostedVoicemailPolicyChanged ||
+               IsMobilityPolicyChanged)
             {
-                MainText.AppendText(updatestring);
-                //UpdateUI();
-                ConnectButton.Content = "Connected";
-                var myTextBox = (TextBox)this.FindName("InputCommand");
-                myTextBox.AppendText("ok!");
-                //PSconnection();
-            }
-              );
+                //if confirmed, run set-csuser and\ or grant policies
+                if (MessageBox.Show("Do you really want to change following attributes for the "
+                    + SipAddress + " user? (if Global or Site: policies are chosen, the user " +
+                    "will be granted with automatic policy)\n" + ChangedAttr,
+                    "Confirm",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information, MessageBoxResult.No) == MessageBoxResult.Yes)
+                {
+                    if (IsSipAddressChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        result = PSExecute("Set-CsUser -Identity '" + Identity + 
+                            "'" + " -SipAddress 'sip:" + SipAddressTextBox.Text + "'");
 
+                        if (result != null)
+                        {
+                            AppendMainText("\nsip address changed\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
+
+                    if (IsLineURIChanged)
+                    {
+                        string NewLineURI;
+                        //if lineuri string is empty, set argument as $null
+                        if (String.IsNullOrEmpty(LineURITextBox.Text))
+                        {
+                            NewLineURI = "$null";
+                        }
+                        else
+                        {
+                            NewLineURI = "'tel:" + LineURITextBox.Text + "'";
+                        }
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        result = PSExecute("Set-CsUser -Identity '" + Identity + "'" + "-LineURI " + NewLineURI);
+
+                        if (result != null)
+                        {
+                            AppendMainText("\nLineURI changed\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
+
+                    if (IsEnterpriseVoiceEnabledChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        result = PSExecute("Set-CsUser -Identity '" + Identity + 
+                            "'" + " -EnterpriseVoiceEnabled $" + (!EnterpriseVoiceEnabled).ToString());
+
+                        if (result != null)
+                        {
+                            AppendMainText("\nEV changed\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
+
+                    if (IsConferencingPolicyChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        //for Global and Site policies use $null for automatical assigment
+                        if (ConferencingPolicyComboBox.SelectedValue.ToString() != "Global" && !(ConferencingPolicyComboBox.SelectedValue.ToString().StartsWith("Site:")))
+                            result = PSExecute("Grant-CsConferencingPolicy -Identity '" + Identity + "'"
+                                + " -PolicyName '" + ConferencingPolicyComboBox.SelectedValue + "'");
+                        else result = PSExecute("Grant-CsConferencingPolicy -Identity '" + Identity + "'" + " -PolicyName $null");
+                        if (result != null)
+                        {
+                            AppendMainText("\nNew Conferencing Policy granted\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
+                    if (IsVoicePolicyChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        //for Global and Site policies use $null for automatical assigment
+                        if (VoicePolicyComboBox.SelectedValue.ToString() != "Global" && !(VoicePolicyComboBox.SelectedValue.ToString().StartsWith("Site:")))
+                            result = PSExecute("Grant-CsVoicePolicy -Identity '" + Identity + "'"
+                                + " -PolicyName '" + VoicePolicyComboBox.SelectedValue + "'");
+                        else result = PSExecute("Grant-CsVoicePolicy -Identity '" + Identity + "'" + " -PolicyName $null");
+                        if (result != null)
+                        {
+                            AppendMainText("\nNew Voice Policy granted\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
+                    if (IsExternalAccessPolicyChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        //for Global and Site policies use $null for automatical assigment
+                        if (ExternalAccessPolicyComboBox.SelectedValue.ToString() != "Global" && !(ExternalAccessPolicyComboBox.SelectedValue.ToString().StartsWith("Site:")))
+                            result = PSExecute("Grant-CsExternalAccessPolicy -Identity '" + Identity + "'"
+                                + " -PolicyName '" + ExternalAccessPolicyComboBox.SelectedValue + "'");
+                        else result = PSExecute("Grant-CsExternalAccessPolicy -Identity '" + Identity + "'" + " -PolicyName $null");
+                        if (result != null)
+                        {
+                            AppendMainText("\nNew External Access Policy granted\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
+                    if (IsHostedVoicemailPolicyChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        //for Global and Site policies use $null for automatical assigment
+                        if (HostedVoicemailPolicyComboBox.SelectedValue.ToString() != "Global" && !(HostedVoicemailPolicyComboBox.SelectedValue.ToString().StartsWith("Site:")))
+                            result = PSExecute("Grant-CsHostedVoicemailPolicy -Identity '" + Identity + "'"
+                                + " -PolicyName '" + HostedVoicemailPolicyComboBox.SelectedValue + "'");
+                        else result = PSExecute("Grant-CsHostedVoicemailPolicy -Identity '" + Identity + "'" + " -PolicyName $null");
+                        if (result != null)
+                        {
+                            AppendMainText("\nNew External Access Policy granted\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
+                    if (IsMobilityPolicyChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        //for Global and Site policies use $null for automatical assigment
+                        if (MobilityPolicyComboBox.SelectedValue.ToString() != "Global" && !(MobilityPolicyComboBox.SelectedValue.ToString().StartsWith("Site:")))
+                            result = PSExecute("Grant-CsMobilityPolicy -Identity '" + Identity + "'"
+                                + " -PolicyName '" + MobilityPolicyComboBox.SelectedValue + "'");
+                        else result = PSExecute("Grant-CsMobilityPolicy -Identity '" + Identity + "'" + " -PolicyName $null");
+                        if (result != null)
+                        {
+                            AppendMainText("\nNew External Access Policy granted\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
 
                 }
-                */
+
+            //disable Update Button until next user will be found
+            UpdateButton("UpdateUserButton", false, "Search again");
+
+            }
+
+            else
+            {
+                MessageBox.Show("None of attributes were changed", "Nothing to change", MessageBoxButton.OK,
+                MessageBoxImage.Information, MessageBoxResult.OK);
+            }
+        }    
 
         //declaration of a delegate for button dispatcher
         private delegate void BUpdater(string ButtonName, bool EnableDisable, string ChangeContent);
@@ -652,7 +773,7 @@ private static SecureString String2SecureString(string password)
             myButton.IsEnabled = EnableDisable;
             if (ChangeContent != "")
             {
-                ConnectButton.Content = ChangeContent;
+                myButton.Content = ChangeContent;
             }       
         }
 
@@ -755,7 +876,6 @@ private static SecureString String2SecureString(string password)
         private void ViewMobilityPolicyButton_Click(object sender, RoutedEventArgs e)
         {
             PSObject result = new PSObject();
-
             try
             {
                 result = PSExecute("Get-CsMobilityPolicy -Identity " +
@@ -817,7 +937,7 @@ private static SecureString String2SecureString(string password)
             if (pinwindow.PinEntered && !String.IsNullOrEmpty(pinwindow.Pin))
             {
                 Collection<PSObject> result = new Collection<PSObject>();
-                result = PSExecute("Set-CsClientPin -Pin " + pinwindow.Pin + " -Identity '" + Identity + "'");
+                result = PSExecute("Set-CsClientPin -Pin '" + pinwindow.Pin + "'" + " -Identity '" + Identity + "'");
                 if (result != null)
                      {
                          AppendMainText(String.Format("\nThe pin reset for {0}\nPin: {1}\nPinReset: {2}", result.First().Properties["Identity"].Value.ToString(),
@@ -827,7 +947,7 @@ private static SecureString String2SecureString(string password)
 
                 else
                      {  
-                        AppendMainText("\nThe error occured, try again\n");
+                        AppendMainText("\nThe error occured, please see details above, try again\n");
                      }
             }
         }
