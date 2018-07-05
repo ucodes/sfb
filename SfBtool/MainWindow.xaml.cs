@@ -98,11 +98,11 @@ namespace SfBtool
             sessionOption.SkipCACheck = true;
             sessionOption.SkipCNCheck = true;
             sessionOption.SkipRevocationCheck = true;
-            TimeSpan ts = TimeSpan.FromMinutes(1);
+            TimeSpan ts = TimeSpan.FromMinutes(5);
             sessionOption.IdleTimeout = ts;
             sessionOption.CancelTimeout = ts;
             sessionOption.OperationTimeout = ts;
-            sessionOption.OpenTimeout = ts;
+            sessionOption.OpenTimeout = TimeSpan.FromMinutes(1);
             command.AddParameter("SessionOption", sessionOption);
 
             powershell.Commands = command;
@@ -282,50 +282,59 @@ namespace SfBtool
         {
             Collection<PSObject> results = new Collection<PSObject>();
 
-            List<string> _ConferencingPolicy = new List<string>();
-            results = PSExecute("Get-CsConferencingPolicy");
-            foreach (PSObject PSresult in results)
+            try
             {
-                _ConferencingPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                List<string> _ConferencingPolicy = new List<string>();
+                results = PSExecute("Get-CsConferencingPolicy");
+                foreach (PSObject PSresult in results)
+                {
+                    _ConferencingPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                }
+
+                ConferencingPolicyComboBox.ItemsSource = _ConferencingPolicy;
+
+                List<string> _VoicePolicy = new List<string>();
+                results = PSExecute("Get-CsVoicePolicy");
+                foreach (PSObject PSresult in results)
+                {
+                    _VoicePolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                }
+
+                VoicePolicyComboBox.ItemsSource = _VoicePolicy;
+
+                List<string> _ExternalAccessPolicy = new List<string>();
+                results = PSExecute("Get-CsExternalAccessPolicy");
+                foreach (PSObject PSresult in results)
+                {
+                    _ExternalAccessPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                }
+
+                ExternalAccessPolicyComboBox.ItemsSource = _ExternalAccessPolicy;
+
+                List<string> _HostedVoicemailPolicy = new List<string>();
+                results = PSExecute("Get-CsHostedVoicemailPolicy");
+                foreach (PSObject PSresult in results)
+                {
+                    _HostedVoicemailPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                }
+
+                HostedVoicemailPolicyComboBox.ItemsSource = _HostedVoicemailPolicy;
+
+                List<string> _MobilityPolicy = new List<string>();
+                results = PSExecute("Get-CsMobilityPolicy");
+                foreach (PSObject PSresult in results)
+                {
+                    _MobilityPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                }
+
+                MobilityPolicyComboBox.ItemsSource = _MobilityPolicy;
             }
 
-            ConferencingPolicyComboBox.ItemsSource = _ConferencingPolicy;
-
-            List<string> _VoicePolicy = new List<string>();
-            results = PSExecute("Get-CsVoicePolicy");
-            foreach (PSObject PSresult in results)
+            catch (Exception ex)
             {
-                _VoicePolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                AppendMainText("Following error happened while retrieving policies:\n");
+                AppendMainText("Exception: " + ex.Message.ToString() + "\n");
             }
-
-            VoicePolicyComboBox.ItemsSource = _VoicePolicy;
-
-            List<string> _ExternalAccessPolicy = new List<string>();
-            results = PSExecute("Get-CsExternalAccessPolicy");
-            foreach (PSObject PSresult in results)
-            {
-                _ExternalAccessPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
-            }
-
-            ExternalAccessPolicyComboBox.ItemsSource = _ExternalAccessPolicy;
-
-            List<string>  _HostedVoicemailPolicy = new List<string>();
-            results = PSExecute("Get-CsHostedVoicemailPolicy");
-            foreach (PSObject PSresult in results)
-            {
-                _HostedVoicemailPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
-            }
-
-            HostedVoicemailPolicyComboBox.ItemsSource = _HostedVoicemailPolicy;
-
-            List<string> _MobilityPolicy = new List<string>();
-            results = PSExecute("Get-CsMobilityPolicy");
-            foreach (PSObject PSresult in results)
-            {
-                _MobilityPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
-            }
-
-            MobilityPolicyComboBox.ItemsSource = _MobilityPolicy;
 
         }
    
@@ -347,10 +356,11 @@ namespace SfBtool
 
             foreach (ErrorRecord current in powershell.Streams.Error)
                 {
-                    MainText.AppendText("PSExecute error start\n");
-                    MainText.AppendText("Exception: " + current.Exception.ToString() + "\n");
-                    MainText.AppendText("Inner Exception: " + current.Exception.InnerException + "\n");
-                    MainText.AppendText("PSExecute error end\n");
+                    AppendMainText("PSExecute error start\n");
+                    AppendMainText("Exception: " + current.Exception.ToString() + "\n");
+                    AppendMainText("Inner Exception: " + current.Exception.InnerException + "\n");
+                    AppendMainText("PSExecute error end\n");
+                    return null;
                 }
 
                 return results;
@@ -367,9 +377,9 @@ namespace SfBtool
 
             catch (Exception ex)
             {
-                MainText.AppendText("Following exception happened when calling PS command:\n");
-                MainText.AppendText("Exception: " + ex.Message.ToString());
-               return null;
+                AppendMainText("Following exception happened when calling PS command:\n");
+                AppendMainText("Exception: " + ex.Message.ToString());
+                return null;
             }
 
             finally
@@ -426,81 +436,89 @@ private static SecureString String2SecureString(string password)
             Collection<PSObject> results = new Collection<PSObject>();
             results = PSExecute("Get-CsUser -Filter{SipAddress -like \"*" + 
                                     SearchUserTextBox.Text + "*\"}");
-            //check whether more than one user was found
-            if (results.Count > 1)
-            {
-                AppendMainText("\nFollowing users were found, please type exact SIP address of a user" + "\n");
-                //MainText.AppendText("Following users were found, please type exact SIP address of a user" + "\n");
 
-                foreach (PSObject PSresult in results)
-                {
-                    AppendMainText(PSresult.Properties["SipAddress"].Value.ToString() + "\n");
-                    //MainText.AppendText(PSresult.Properties["SipAddress"].Value.ToString() + "\n");
-                }
-            }
-            //one user is expected
-            else if (results.Count == 1)
+            try
             {
 
-                //show all user info in the main box
-                AppendMainText("\nAll attributes of found user:" + "\n");
-                //MainText.AppendText("All attributes of found user:" + "\n");
-                foreach (PSPropertyInfo PSpr in results.First().Properties)
+                //check whether more than one user was found
+                if (results.Count > 1)
                 {
-                    AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
-                    //MainText.AppendText(PSpr.Name + " " + PSpr.Value + "\n");
-                }
+                    AppendMainText("\nFollowing users were found, please type exact SIP address of a user" + "\n");
 
-                //get user info
-                Identity = results.First().Properties["Identity"].Value.ToString();
-                SipAddress = results.First().Properties["SipAddress"].Value.ToString();
-                RegistrarPool = results.First().Properties["RegistrarPool"].Value.ToString();
-                if (results.First().Properties["EnterpriseVoiceEnabled"].Value.ToString() == "True")
-                {
-                    EnterpriseVoiceEnabled = true;
-                }
-                LineURI = results.First().Properties["LineURI"].Value.ToString();
-
-                //get effective user policies
-                results = PSExecute("Get-CsEffectivePolicy -Identity '" + Identity + "'");
-                UserPolicies.Add("ConferencingPolicy", results.First().Properties["ConferencingPolicy"].Value.ToString());
-                UserPolicies.Add("VoicePolicy", results.First().Properties["VoicePolicy"].Value.ToString());
-                UserPolicies.Add("ExternalAccessPolicy", results.First().Properties["ExternalAccessPolicy"].Value.ToString());
-                UserPolicies.Add("HostedVoicemailPolicy", results.First().Properties["HostedVoicemailPolicy"].Value.ToString());
-                UserPolicies.Add("MobilityPolicy", results.First().Properties["MobilityPolicy"].Value.ToString());
-
-                //change site policy name from "Site:siteID"  to "Site:siteName"
-                List<string> _keys = new List<string>(UserPolicies.Keys.Cast<string>());
-                //_keys = UserPolicies;
-
-                foreach (string policy in _keys)
-                {
-                    if (UserPolicies[policy].ToString().StartsWith("Site:"))
+                    foreach (PSObject PSresult in results)
                     {
-                        //get site name by site id taken from effective policy
-                        results = PSExecute("Get-CsSite | Where-Object SiteId -eq \"" +
-                                                UserPolicies[policy].ToString().Replace("Site:", "") + "\"");
-                        UserPolicies[policy] = results.First().Properties["Identity"].Value.ToString();
+                        AppendMainText(PSresult.Properties["SipAddress"].Value.ToString() + "\n");
                     }
                 }
+                //one user is expected
+                else if (results.Count == 1)
+                {
 
-                //update UI (fill neccessary attributes in action block (left section))
-                UpdateUIwithUserAttributes();
+                    //show all user info in the main box
+                    AppendMainText("\nAll attributes of found user:" + "\n");
+                    foreach (PSPropertyInfo PSpr in results.First().Properties)
+                    {
+                        AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
+                    }
 
-                //enable functional buttons
-                UpdateButton("ViewConferencingPolicyButton", true, "");
-                UpdateButton("ViewExternalAccessPolicyButton", true, "");
-                UpdateButton("ViewHostedVoicemailPolicyButton", true, "");
-                UpdateButton("ViewMobilityPolicyButton", true, "");
-                UpdateButton("ViewVoicePolicyButton", true, "");
-                UpdateButton("UpdateUserButton", true, "");
-                UpdateButton("ResetPinButton", true, "");
+                    //get user info
+                    Identity = results.First().Properties["Identity"].Value.ToString();
+                    SipAddress = results.First().Properties["SipAddress"].Value.ToString();
+                    RegistrarPool = results.First().Properties["RegistrarPool"].Value.ToString();
+                    if (results.First().Properties["EnterpriseVoiceEnabled"].Value.ToString() == "True")
+                    {
+                        EnterpriseVoiceEnabled = true;
+                    }
+                    LineURI = results.First().Properties["LineURI"].Value.ToString();
+
+                    //get effective user policies
+                    results = PSExecute("Get-CsEffectivePolicy -Identity '" + Identity + "'");
+                    UserPolicies.Add("ConferencingPolicy", results.First().Properties["ConferencingPolicy"].Value.ToString());
+                    UserPolicies.Add("VoicePolicy", results.First().Properties["VoicePolicy"].Value.ToString());
+                    UserPolicies.Add("ExternalAccessPolicy", results.First().Properties["ExternalAccessPolicy"].Value.ToString());
+                    UserPolicies.Add("HostedVoicemailPolicy", results.First().Properties["HostedVoicemailPolicy"].Value.ToString());
+                    UserPolicies.Add("MobilityPolicy", results.First().Properties["MobilityPolicy"].Value.ToString());
+
+                    //change site policy name from "Site:siteID"  to "Site:siteName"
+                    List<string> _keys = new List<string>(UserPolicies.Keys.Cast<string>());
+                    //_keys = UserPolicies;
+
+                    foreach (string policy in _keys)
+                    {
+                        if (UserPolicies[policy].ToString().StartsWith("Site:"))
+                        {
+                            //get site name by site id taken from effective policy
+                            results = PSExecute("Get-CsSite | Where-Object SiteId -eq \"" +
+                                                    UserPolicies[policy].ToString().Replace("Site:", "") + "\"");
+                            UserPolicies[policy] = results.First().Properties["Identity"].Value.ToString();
+                        }
+                    }
+
+                    //update UI (fill neccessary attributes in action block (left section))
+                    UpdateUIwithUserAttributes();
+
+                    //enable functional buttons
+                    UpdateButton("ViewConferencingPolicyButton", true, "");
+                    UpdateButton("ViewExternalAccessPolicyButton", true, "");
+                    UpdateButton("ViewHostedVoicemailPolicyButton", true, "");
+                    UpdateButton("ViewMobilityPolicyButton", true, "");
+                    UpdateButton("ViewVoicePolicyButton", true, "");
+                    UpdateButton("UpdateUserButton", true, "");
+                    UpdateButton("ResetPinButton", true, "");
+
+                }
+
+                else
+                {
+                    AppendMainText("\nNo users were found\n");
+                }
 
             }
 
-            else
+            catch (Exception ex)
             {
-                AppendMainText("\nNo users were found\n");
+                AppendMainText("Following exception occured while searching Lync users:\n");
+                AppendMainText("Exception: " + ex.Message.ToString());
             }
         }
 
@@ -516,6 +534,7 @@ private static SecureString String2SecureString(string password)
                  IsHostedVoicemailPolicyChanged = false,
                  IsMobilityPolicyChanged = false;
             string ChangedAttr = "";
+
 
             //check which attributes have been changed
             if (SipAddressTextBox.Text != (String.IsNullOrEmpty(SipAddress) ? SipAddress : SipAddress.Remove(0, 4)))
@@ -622,11 +641,8 @@ private static SecureString String2SecureString(string password)
         //call this from parrallel thread to update buttons
         private void UpdateButton(string ButtonName, bool EnableDisable, string ChangeContent)
         {
-
             BUpdater UIUpdater = new BUpdater(ButtonUpdater);
-
             Dispatcher.BeginInvoke(DispatcherPriority.Send, UIUpdater, ButtonName, EnableDisable, ChangeContent);
-
         }
 
         //button dispatcher
@@ -644,16 +660,22 @@ private static SecureString String2SecureString(string password)
         private void ViewConferencingPolicyButton_Click(object sender, RoutedEventArgs e)
         {
             PSObject result = new PSObject();
-            result = PSExecute("Get-CsConferencingPolicy -Identity " +
-                        ConferencingPolicyComboBox.SelectedValue.ToString()).First();
-            AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-                          + " policy:\n");
-            //MainText.AppendText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-            //            + "policy:\n");
-            foreach (PSPropertyInfo PSpr in result.Properties)
+
+            try
             {
-                AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
-                //MainText.AppendText(PSpr.Name + " " + PSpr.Value + "\n");
+                result = PSExecute("Get-CsConferencingPolicy -Identity " +
+                            ConferencingPolicyComboBox.SelectedValue.ToString()).First();
+                AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
+                              + " policy:\n");
+                foreach (PSPropertyInfo PSpr in result.Properties)
+                {
+                    AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendMainText("Following exception happened when getting policy info:\n");
+                AppendMainText("Exception: " + ex.Message.ToString());
             }
         }
 
@@ -661,70 +683,101 @@ private static SecureString String2SecureString(string password)
         private void ViewVoicePolicyButton_Click(object sender, RoutedEventArgs e)
         {
             PSObject result = new PSObject();
-            result = PSExecute("Get-CsVoicePolicy -Identity " +
-                        VoicePolicyComboBox.SelectedValue.ToString()).First();
-            AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-                          + " policy:\n");
-            //MainText.AppendText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-            //            + "policy:\n");
-            foreach (PSPropertyInfo PSpr in result.Properties)
+            try
             {
-                AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
-                //MainText.AppendText(PSpr.Name + " " + PSpr.Value + "\n");
+                result = PSExecute("Get-CsVoicePolicy -Identity " +
+                            VoicePolicyComboBox.SelectedValue.ToString()).First();
+                AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
+                              + " policy:\n");
+                foreach (PSPropertyInfo PSpr in result.Properties)
+                {
+                    AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
+
+                }
+            }
+
+            catch (Exception ex)
+            {
+                AppendMainText("Following exception happened when getting policy info:\n");
+                AppendMainText("Exception: " + ex.Message.ToString());
             }
         }
         //get ExternalAccessPolicy info
         private void ViewExternalAccessPolicyButton_Click(object sender, RoutedEventArgs e)
         {
             PSObject result = new PSObject();
-            result = PSExecute("Get-CsExternalAccessPolicy -Identity " +
-                        ExternalAccessPolicyComboBox.SelectedValue.ToString()).First();
-            AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-                          + " policy:\n");
-            //MainText.AppendText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-            //            + "policy:\n");
-            foreach (PSPropertyInfo PSpr in result.Properties)
+
+            try
             {
-                AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
-                //MainText.AppendText(PSpr.Name + " " + PSpr.Value + "\n");
+                result = PSExecute("Get-CsExternalAccessPolicy -Identity " +
+                            ExternalAccessPolicyComboBox.SelectedValue.ToString()).First();
+                AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
+                              + " policy:\n");
+                foreach (PSPropertyInfo PSpr in result.Properties)
+                {
+                    AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");              
+                }
             }
+
+            catch (Exception ex)
+            {
+                AppendMainText("Following exception happened when getting policy info:\n");
+                AppendMainText("Exception: " + ex.Message.ToString());
+            }
+
         }
+
         //get HostedVoicemailPolicy info
         private void ViewHostedVoicemailPolicyButton_Click(object sender, RoutedEventArgs e)
         {
             PSObject result = new PSObject();
-            result = PSExecute("Get-CsHostedVoicemailPolicy -Identity " +
-                        HostedVoicemailPolicyComboBox.SelectedValue.ToString()).First();
-            AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-                          + " policy:\n");
-            //MainText.AppendText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-            //            + "policy:\n");
-            foreach (PSPropertyInfo PSpr in result.Properties)
+            try
             {
-                AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
-                //MainText.AppendText(PSpr.Name + " " + PSpr.Value + "\n");
+                result = PSExecute("Get-CsHostedVoicemailPolicy -Identity " +
+                            HostedVoicemailPolicyComboBox.SelectedValue.ToString()).First();
+                AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
+                              + " policy:\n");
+
+                foreach (PSPropertyInfo PSpr in result.Properties)
+                {
+                    AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
+                }
             }
+
+            catch (Exception ex)
+            {
+                AppendMainText("Following exception happened when getting policy info:\n");
+                AppendMainText("Exception: " + ex.Message.ToString());
+            }
+
         }
         //get MobilityPolicy info
         private void ViewMobilityPolicyButton_Click(object sender, RoutedEventArgs e)
         {
             PSObject result = new PSObject();
-            result = PSExecute("Get-CsMobilityPolicy -Identity " +
-                        MobilityPolicyComboBox.SelectedValue.ToString()).First();
-            AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-                          + " policy:\n");
-            //MainText.AppendText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
-            //            + "policy:\n");
-            foreach (PSPropertyInfo PSpr in result.Properties)
+
+            try
             {
-                AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
-                //MainText.AppendText(PSpr.Name + " " + PSpr.Value + "\n");
+                result = PSExecute("Get-CsMobilityPolicy -Identity " +
+                            MobilityPolicyComboBox.SelectedValue.ToString()).First();
+                AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
+                              + " policy:\n");
+                foreach (PSPropertyInfo PSpr in result.Properties)
+                {
+                    AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
+                }
+            }
+        
+
+            catch (Exception ex)
+            {
+                AppendMainText("Following exception happened when getting policy info:\n");
+                AppendMainText("Exception: " + ex.Message.ToString());
             }
         }
 
         private void AppendMainText(string UpdText)
         {
-
             //Dispatcher for MainWindow for updating UI
             Dispatcher.BeginInvoke(DispatcherPriority.Normal, (ThreadStart)delegate ()
             {
@@ -763,22 +816,26 @@ private static SecureString String2SecureString(string password)
             //check whether Pin was entered and isnt null
             if (pinwindow.PinEntered && !String.IsNullOrEmpty(pinwindow.Pin))
             {
-                PSObject result = new PSObject();
-                result = PSExecute("Set-CsClientPin -Pin " + pinwindow.Pin + " -Identity '" + Identity + "'").First();
-                AppendMainText(String.Format("\nThe pin reset for {0}\nPin: {1}\nPinReset: {2}", result.Properties["Identity"].Value.ToString(),
-                result.Properties["Pin"].Value.ToString(),
-                result.Properties["PinReset"].Value.ToString()));
+                Collection<PSObject> result = new Collection<PSObject>();
+                result = PSExecute("Set-CsClientPin -Pin " + pinwindow.Pin + " -Identity '" + Identity + "'");
+                if (result != null)
+                     {
+                         AppendMainText(String.Format("\nThe pin reset for {0}\nPin: {1}\nPinReset: {2}", result.First().Properties["Identity"].Value.ToString(),
+                         result.First().Properties["Pin"].Value.ToString(),
+                         result.First().Properties["PinReset"].Value.ToString()));
+                     }
 
+                else
+                     {  
+                        AppendMainText("\nThe error occured, try again\n");
+                     }
             }
-      
-
         }
 
         //run command on a remote server to prevent a session timeout
         private void OnElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             PSExecute("get-cssipdomain");
-           // AppendMainText("timer called");
             Idletimer.Start(); // Restart timer
         }
 
