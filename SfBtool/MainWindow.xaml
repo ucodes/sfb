@@ -42,14 +42,14 @@
             </TextBlock>
             <Label Content="SIP address:" HorizontalAlignment="Left" Height="30" Margin="11,260,0,0" VerticalAlignment="Top" Width="79"/>
             <Label Content="sip:" HorizontalAlignment="Left" Height="30" Margin="125,260,0,0" VerticalAlignment="Top" Width="32"/>
-            <TextBox x:Name="SipAddressTextBox" HorizontalAlignment="Left" Height="17" Margin="150,265,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="211"/>
+            <TextBox x:Name="SipAddressTextBox" HorizontalAlignment="Left" Height="17" Margin="150,265,0,0" Text="" VerticalAlignment="Top" Width="211"/>
             <Label Content="Registrar pool:" HorizontalAlignment="Left" Height="30" Margin="11,280,0,0" VerticalAlignment="Top" Width="89"/>
             <TextBlock x:Name="RegistrarPoolTextBlock" HorizontalAlignment="Left" Height="15" Margin="152,285,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="209"/>
             <Label Content="Enterprice Voice enabled:" HorizontalAlignment="Left" Height="30" Margin="11,300,0,0" VerticalAlignment="Top" Width="145"/>
             <CheckBox x:Name="EnterpriseVoiceEnabledCheckBox" Content="CheckBox" HorizontalAlignment="Left" Height="24" Margin="154,306,0,0" VerticalAlignment="Top" Width="20"/>
             <Label Content="Line URI:" HorizontalAlignment="Left" Height="30" Margin="11,320,0,0" VerticalAlignment="Top" Width="59"/>
             <Label Content="tel:" HorizontalAlignment="Left" Height="30" Margin="125,320,0,0" VerticalAlignment="Top" Width="32"/>
-            <TextBox x:Name="LineURITextBox" HorizontalAlignment="Left" Height="17" Margin="150,324,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="211"/>
+            <TextBox x:Name="LineURITextBox" HorizontalAlignment="Left" Height="17" Margin="150,324,0,0" Text="" VerticalAlignment="Top" Width="211" />
             <Label Content="ConferencingPolicy:" HorizontalAlignment="Left" Height="28" Margin="11,340,0,0" VerticalAlignment="Top" Width="115"/>
             <Label Content="VoicePolicy:" HorizontalAlignment="Left" Height="30" Margin="11,365,0,0" VerticalAlignment="Top" Width="115"/>
             <Label Content="ExternalAccessPolicy:" HorizontalAlignment="Left" Height="30" Margin="11,390,0,0" VerticalAlignment="Top" Width="135"/>

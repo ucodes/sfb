@@ -70,7 +70,7 @@ namespace SfBtool
 
             string returnstring="";
 
-            System.Uri uri = new Uri("https://192.168.1.134/ocspowershell");
+            System.Uri uri = new Uri("https://localhost:12346/ocspowershell");
             System.Security.SecureString securePassword = String2SecureString(password);
 
             PSCredential creds = new PSCredential(userName, securePassword);
@@ -113,6 +113,8 @@ namespace SfBtool
                     returnstring += "Exception: " + current.Exception.ToString() + "\n";
                     returnstring += "Inner Exception: " + current.Exception.InnerException + "\n";
                     returnstring += "Creating new PSSession error_end\n";
+                    ConnectionFlag = false;
+                    return;
                 }
 
                 //one PS sessions is expected
@@ -145,6 +147,7 @@ namespace SfBtool
                     returnstring += "Exception: " + current.Exception.ToString() + "\n";
                     returnstring += "Inner Exception: " + current.Exception.InnerException + "\n";
                     returnstring += "Set-Variable error_end\n";
+                    ConnectionFlag = false;
                     return;
                 }
 
@@ -166,6 +169,7 @@ namespace SfBtool
                     returnstring += "Exception: " + current.Exception.ToString() + "\n";
                     returnstring += "Inner Exception: " + current.Exception.InnerException + "\n";
                     returnstring += "Set-ExecutionPolicy error_end\n";
+                    ConnectionFlag = false;
                     return;
                 }
 
@@ -183,6 +187,7 @@ namespace SfBtool
                     returnstring += "Exception: " + current.Exception.ToString() + "\n";
                     returnstring += "Inner Exception: " + current.Exception.InnerException + "\n";
                     returnstring += "Import-PSSession error_end\n";
+                    ConnectionFlag = false;
                     return;
                 }
 
@@ -202,6 +207,7 @@ namespace SfBtool
                     returnstring += "Exception: " + current.Exception.ToString() + "\n";
                     returnstring += "Inner Exception: " + current.Exception.InnerException + "\n";
                     returnstring += "Get-CsWindowsService error_end\n";
+                    ConnectionFlag = false;
                     return;
                 }
                
@@ -235,6 +241,7 @@ namespace SfBtool
             {
                 returnstring += "Following exception happened while connecting to remote PS:\n";
                 returnstring += "Exception: " + ex.Message.ToString() + "\n";
+                ConnectionFlag = false;
             }
 
             finally
@@ -248,6 +255,7 @@ namespace SfBtool
 
                 if (!ConnectionFlag)
                 {
+                    //PSExecute("Remove-Variable ra");
                     UpdateButton("ConnectButton", true, "Connect");
                     UpdateButton("SearchButton", false, "");
 
