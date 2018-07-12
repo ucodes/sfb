@@ -65,7 +65,9 @@
             <Button x:Name="ViewExternalAccessPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,396,0,0" VerticalAlignment="Top" Width="71" Click="ViewExternalAccessPolicyButton_Click" IsEnabled="False"/>
             <Button x:Name="ViewHostedVoicemailPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,421,0,0" VerticalAlignment="Top" Width="71" Click="ViewHostedVoicemailPolicyButton_Click" IsEnabled="False"/>
             <Button x:Name="ViewMobilityPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,446,0,0" VerticalAlignment="Top" Width="71" Click="ViewMobilityPolicyButton_Click" IsEnabled="False"/>
-            
+            <Label Content="Hosted Voicemail:" HorizontalAlignment="Left" Height="30" Margin="221,300,0,0" VerticalAlignment="Top" Width="145"/>
+            <CheckBox x:Name="HostedVoicemailCheckBox" Content="CheckBox" HorizontalAlignment="Left" Height="24" Margin="324,306,0,0" VerticalAlignment="Top" Width="20"/>
+
             <!--   <Border BorderBrush="Black" BorderThickness="0.3" HorizontalAlignment="Left" Height="300" Margin="-10,207,0,-30.2" VerticalAlignment="Top" Width="412"/>
            -->
         </Grid>

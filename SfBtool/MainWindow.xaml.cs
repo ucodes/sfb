@@ -31,7 +31,7 @@ namespace SfBtool
         string Identity, SipAddress, RegistrarPool, LineURI;
 
         Hashtable UserPolicies = new Hashtable();
-        bool EnterpriseVoiceEnabled;
+        bool EnterpriseVoiceEnabled, HostedVoicemail;
 
         private string password;
         private string userName;
@@ -401,6 +401,7 @@ private static SecureString String2SecureString(string password)
             RegistrarPool = "";
             LineURI = "";
             EnterpriseVoiceEnabled = false;
+            HostedVoicemail = false;
 
             //update UI
             UpdateUIwithUserAttributes();
@@ -453,7 +454,25 @@ private static SecureString String2SecureString(string password)
                     {
                         EnterpriseVoiceEnabled = true;
                     }
-                    LineURI = results.First().Properties["LineURI"].Value.ToString();
+
+                    if (results.First().Properties["HostedVoiceMail"].Value != null)
+                    {
+                        if (results.First().Properties["HostedVoiceMail"].Value.ToString() == "True")
+                        {
+                            HostedVoicemail = true;
+                        }
+                    }
+                
+
+                    //check - if lineuri is null set up an empty string 
+                    if (results.First().Properties["LineURI"].Value == null)
+                    {
+                        LineURI = "";
+                    }
+                    else
+                    {
+                        LineURI = results.First().Properties["LineURI"].Value.ToString();
+                    }              
 
                     //get effective user policies
                     results = PSExecute("Get-CsEffectivePolicy -Identity '" + Identity + "'");
@@ -511,6 +530,7 @@ private static SecureString String2SecureString(string password)
                  //   IsRegistrarPoolChanged = false, 
                  IsLineURIChanged = false,
                  IsEnterpriseVoiceEnabledChanged = false,
+                 IsHostedVoicemailChanged = false,
                  IsConferencingPolicyChanged = false,
                  IsVoicePolicyChanged = false,
                  IsExternalAccessPolicyChanged = false,
@@ -539,6 +559,13 @@ private static SecureString String2SecureString(string password)
                 ChangedAttr += "\nEV Enabled from " + EnterpriseVoiceEnabled.ToString() + 
                     " to " + EnterpriseVoiceEnabledCheckBox.IsChecked.ToString() + "\n";
                 IsEnterpriseVoiceEnabledChanged = true;
+            }
+
+            if (HostedVoicemailCheckBox.IsChecked != HostedVoicemail)
+            {
+                ChangedAttr += "\nHosted VM enabled from " + HostedVoicemail.ToString() +
+                    " to " + HostedVoicemailCheckBox.IsChecked.ToString() + "\n";
+                IsHostedVoicemailChanged = true;
             }
 
             //check conf pol
@@ -585,6 +612,7 @@ private static SecureString String2SecureString(string password)
             if (IsSipAddressChanged ||
                IsLineURIChanged ||
                IsEnterpriseVoiceEnabledChanged ||
+               IsHostedVoicemailChanged ||
                IsConferencingPolicyChanged ||
                IsVoicePolicyChanged ||
                IsExternalAccessPolicyChanged ||
@@ -659,6 +687,23 @@ private static SecureString String2SecureString(string password)
                         }
                     }
 
+                    if (IsHostedVoicemailChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        result = PSExecute("Set-CsUser -Identity '" + Identity +
+                            "'" + " -HostedVoicemail $" + (!HostedVoicemail).ToString());
+
+                        if (result != null)
+                        {
+                            AppendMainText("\nHosted VM enabled changed\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }                  
+
                     if (IsConferencingPolicyChanged)
                     {
                         Collection<PSObject> result = new Collection<PSObject>();
@@ -723,7 +768,7 @@ private static SecureString String2SecureString(string password)
                         else result = PSExecute("Grant-CsHostedVoicemailPolicy -Identity '" + Identity + "'" + " -PolicyName $null");
                         if (result != null)
                         {
-                            AppendMainText("\nNew External Access Policy granted\n");
+                            AppendMainText("\nNew Hosted Voicemail Policy granted\n");
                         }
 
                         else
@@ -741,7 +786,7 @@ private static SecureString String2SecureString(string password)
                         else result = PSExecute("Grant-CsMobilityPolicy -Identity '" + Identity + "'" + " -PolicyName $null");
                         if (result != null)
                         {
-                            AppendMainText("\nNew External Access Policy granted\n");
+                            AppendMainText("\nNew Mobility Policy granted\n");
                         }
 
                         else
@@ -976,6 +1021,7 @@ private static SecureString String2SecureString(string password)
             //remove "tel:" prefix if the string isnt empty 
             LineURITextBox.Text = String.IsNullOrEmpty(LineURI) ? LineURI : LineURI.Remove(0, 4);
             EnterpriseVoiceEnabledCheckBox.IsChecked = EnterpriseVoiceEnabled;
+            HostedVoicemailCheckBox.IsChecked = HostedVoicemail;
 
             if (UserPolicies != null)
             {
