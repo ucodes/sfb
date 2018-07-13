@@ -837,8 +837,8 @@ private static SecureString String2SecureString(string password)
 
             try
             {
-                result = PSExecute("Get-CsConferencingPolicy -Identity " +
-                            ConferencingPolicyComboBox.SelectedValue.ToString()).First();
+                result = PSExecute("Get-CsConferencingPolicy -Identity '" +
+                            ConferencingPolicyComboBox.SelectedValue.ToString() + "'").First();
                 AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
                               + " policy:\n");
                 foreach (PSPropertyInfo PSpr in result.Properties)
@@ -859,8 +859,8 @@ private static SecureString String2SecureString(string password)
             PSObject result = new PSObject();
             try
             {
-                result = PSExecute("Get-CsVoicePolicy -Identity " +
-                            VoicePolicyComboBox.SelectedValue.ToString()).First();
+                result = PSExecute("Get-CsVoicePolicy -Identity '" +
+                            VoicePolicyComboBox.SelectedValue.ToString() + "'").First();
                 AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
                               + " policy:\n");
                 foreach (PSPropertyInfo PSpr in result.Properties)
@@ -883,8 +883,8 @@ private static SecureString String2SecureString(string password)
 
             try
             {
-                result = PSExecute("Get-CsExternalAccessPolicy -Identity " +
-                            ExternalAccessPolicyComboBox.SelectedValue.ToString()).First();
+                result = PSExecute("Get-CsExternalAccessPolicy -Identity '" +
+                            ExternalAccessPolicyComboBox.SelectedValue.ToString() + "'").First();
                 AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
                               + " policy:\n");
                 foreach (PSPropertyInfo PSpr in result.Properties)
@@ -907,8 +907,8 @@ private static SecureString String2SecureString(string password)
             PSObject result = new PSObject();
             try
             {
-                result = PSExecute("Get-CsHostedVoicemailPolicy -Identity " +
-                            HostedVoicemailPolicyComboBox.SelectedValue.ToString()).First();
+                result = PSExecute("Get-CsHostedVoicemailPolicy -Identity '" +
+                            HostedVoicemailPolicyComboBox.SelectedValue.ToString() + "'").First();
                 AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
                               + " policy:\n");
 
@@ -931,8 +931,8 @@ private static SecureString String2SecureString(string password)
             PSObject result = new PSObject();
             try
             {
-                result = PSExecute("Get-CsMobilityPolicy -Identity " +
-                            MobilityPolicyComboBox.SelectedValue.ToString()).First();
+                result = PSExecute("Get-CsMobilityPolicy -Identity '" +
+                            MobilityPolicyComboBox.SelectedValue.ToString() + "'").First();
                 AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
                               + " policy:\n");
                 foreach (PSPropertyInfo PSpr in result.Properties)
