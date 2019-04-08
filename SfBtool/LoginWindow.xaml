@@ -11,9 +11,9 @@
 
         <Label Content="Please enter your credeatinals:" HorizontalAlignment="Left" Height="27" Margin="20,24,0,0" VerticalAlignment="Top" Width="192"/>
         <Label Content="Login:" HorizontalAlignment="Left" Height="27" Margin="10,63,0,0" VerticalAlignment="Top" Width="53"/>
-        <TextBox x:Name="LoginTextBox" HorizontalAlignment="Left" Height="17" Margin="84,68,0,0" Text="andrew.ilin@continuantlab.com" VerticalAlignment="Top" Width="144"/>
+        <TextBox x:Name="LoginTextBox" HorizontalAlignment="Left" Height="17" Margin="84,68,0,0" Text="" VerticalAlignment="Top" Width="144"/>
         <Label Content="Password:" HorizontalAlignment="Left" Height="27" Margin="10,90,0,0" VerticalAlignment="Top" Width="69"/>
-        <PasswordBox x:Name="PasswordTextBox" HorizontalAlignment="Left" Height="17" Margin="84,95,0,0" Password="zZk@zan$rv" VerticalAlignment="Top" Width="144"/>
+        <PasswordBox x:Name="PasswordTextBox" HorizontalAlignment="Left" Height="17" Margin="84,95,0,0" Password="" VerticalAlignment="Top" Width="144"/>
         <Button Content="Ok" HorizontalAlignment="Left" Height="23" Margin="20,144,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click_1" IsDefault="True"/>
         <Button Content="Cancel" HorizontalAlignment="Left" Height="23" Margin="156,144,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
 
