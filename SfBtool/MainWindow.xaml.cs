@@ -70,7 +70,7 @@ namespace SfBtool
 
             string returnstring="";
 
-            System.Uri uri = new Uri("https://localhost:12346/ocspowershell");
+         //  System.Uri uri = new Uri("https://localhost:12346/ocspowershell");
             System.Security.SecureString securePassword = String2SecureString(password);
 
             PSCredential creds = new PSCredential(userName, securePassword);
@@ -79,10 +79,10 @@ namespace SfBtool
 
             PowerShell powershell = PowerShell.Create();
             PSCommand command = new PSCommand();
-            command.AddCommand("New-PSSession");
-            command.AddParameter("ConnectionUri", uri);
+            command.AddCommand("New-CsOnlineSession");
+         //  command.AddParameter("ConnectionUri", uri);
             command.AddParameter("Credential", creds);
-            command.AddParameter("Authentication", "Default");
+         //   command.AddParameter("Authentication", "Default");
             PSSessionOption sessionOption = new PSSessionOption();
             sessionOption.SkipCACheck = true;
             sessionOption.SkipCNCheck = true;
@@ -92,7 +92,7 @@ namespace SfBtool
             sessionOption.CancelTimeout = ts;
             sessionOption.OperationTimeout = ts;
             sessionOption.OpenTimeout = TimeSpan.FromMinutes(1);
-            command.AddParameter("SessionOption", sessionOption);
+         //   command.AddParameter("SessionOption", sessionOption);
 
             powershell.Commands = command;
 
@@ -120,7 +120,7 @@ namespace SfBtool
                 //one PS sessions is expected
                 if (result.Count != 1)
                 {
-                    returnstring += "Couldnt connect to Front End or unexpected number " +
+                    returnstring += "Couldnt connect to SfBO or unexpected number " +
                         "of Remote Runspace connections returned" + "\n";
                     //throw new Exception("Unexpected number of Remote Runspace connections returned.");
                 }
@@ -194,7 +194,7 @@ namespace SfBtool
                 // Retrieve server info
                 powershell = PowerShell.Create();
                 command = new PSCommand();
-                command.AddScript("Get-CsWindowsService RTCSRV | Select-Object *");
+                command.AddScript("Get-CsTenant");
                 powershell.Commands = command;
                 powershell.Runspace = runspace;
 
@@ -215,7 +215,7 @@ namespace SfBtool
                 if (powershell.Streams.Error.Count == 0)
                 {
                     AppendMainText("Successfully connected to " + 
-                            results.First().Properties["MachineName"].Value.ToString() + " .Search for a user and " +
+                            results.First().Properties["DisplayName"].Value.ToString() + "tenant .Search for a user and " +
                                     "change required attributes" + ".\n");
                     ConnectionFlag = true;
                     //update buttons
@@ -419,8 +419,7 @@ private static SecureString String2SecureString(string password)
             GetPolicyInfo();
 
             Collection<PSObject> results = new Collection<PSObject>();
-            results = PSExecute("Get-CsUser -Filter{SipAddress -like \"*" + 
-                                    SearchUserTextBox.Text + "*\"}");
+            results = PSExecute("Get-CsOnlineUser \"" + SearchUserTextBox.Text + "*\"");
 
             try
             {
@@ -465,36 +464,21 @@ private static SecureString String2SecureString(string password)
                 
 
                     //check - if lineuri is null set up an empty string 
-                    if (results.First().Properties["LineURI"].Value == null)
+                    if (results.First().Properties["OnPremLineURI"].Value == null)
                     {
                         LineURI = "";
                     }
                     else
                     {
-                        LineURI = results.First().Properties["LineURI"].Value.ToString();
+                        LineURI = results.First().Properties["OnPremLineURI"].Value.ToString();
                     }              
 
                     //get effective user policies
-                    results = PSExecute("Get-CsEffectivePolicy -Identity '" + Identity + "'");
                     UserPolicies.Add("ConferencingPolicy", results.First().Properties["ConferencingPolicy"].Value.ToString());
                     UserPolicies.Add("VoicePolicy", results.First().Properties["VoicePolicy"].Value.ToString());
                     UserPolicies.Add("ExternalAccessPolicy", results.First().Properties["ExternalAccessPolicy"].Value.ToString());
                     UserPolicies.Add("HostedVoicemailPolicy", results.First().Properties["HostedVoicemailPolicy"].Value.ToString());
                     UserPolicies.Add("MobilityPolicy", results.First().Properties["MobilityPolicy"].Value.ToString());
-
-                    //change site policy name from "Site:siteID"  to "Site:siteName"
-                    List<string> _keys = new List<string>(UserPolicies.Keys.Cast<string>());
-
-                    foreach (string policy in _keys)
-                    {
-                        if (UserPolicies[policy].ToString().StartsWith("Site:"))
-                        {
-                            //get site name by site id taken from effective policy
-                            results = PSExecute("Get-CsSite | Where-Object SiteId -eq \"" +
-                                                    UserPolicies[policy].ToString().Replace("Site:", "") + "\"");
-                            UserPolicies[policy] = results.First().Properties["Identity"].Value.ToString();
-                        }
-                    }
 
                     //update UI (fill neccessary attributes in action block (left section))
                     UpdateUIwithUserAttributes();
@@ -657,7 +641,7 @@ private static SecureString String2SecureString(string password)
                             NewLineURI = "'tel:" + LineURITextBox.Text + "'";
                         }
                         Collection<PSObject> result = new Collection<PSObject>();
-                        result = PSExecute("Set-CsUser -Identity '" + Identity + "'" + "-LineURI " + NewLineURI);
+                        result = PSExecute("Set-CsUser -Identity '" + Identity + "'" + "-OnPremLineURI " + NewLineURI);
 
                         if (result != null)
                         {
@@ -981,28 +965,22 @@ private static SecureString String2SecureString(string password)
 
         private void ResetPinButton_Click(object sender, RoutedEventArgs e)
         {
-
-            EnterPIN pinwindow = new EnterPIN();
-            pinwindow.Owner = this;
-            pinwindow.ShowDialog();
-
-            //check whether Pin was entered and isnt null
-            if (pinwindow.PinEntered && !String.IsNullOrEmpty(pinwindow.Pin))
-            {
                 Collection<PSObject> result = new Collection<PSObject>();
-                result = PSExecute("Set-CsClientPin -Pin '" + pinwindow.Pin + "'" + " -Identity '" + Identity + "'");
+                result = PSExecute("Set-CsOnlineDialInConferencingUser -ResetLeaderPin" +
+                                                        " -Identity '" + Identity + "'");
                 if (result != null)
                      {
-                         AppendMainText(String.Format("\nThe pin reset for {0}\nPin: {1}\nPinReset: {2}", result.First().Properties["Identity"].Value.ToString(),
-                         result.First().Properties["Pin"].Value.ToString(),
-                         result.First().Properties["PinReset"].Value.ToString()));
+                        foreach (PSPropertyInfo PSpr in result.First().Properties)
+                        {
+                             AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
+                        }
                      }
 
                 else
                      {  
                         AppendMainText("\nThe error occured, please see details above, try again\n");
                      }
-            }
+            
         }
 
         //run command on a remote server to prevent a session timeout

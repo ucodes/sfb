@@ -8,17 +8,16 @@
         Title="SfB user management tool" Height="450" Width="800"
         ResizeMode="CanMinimize" >
     <Grid Margin="0,0,-0.4,-70">
-        <Button x:Name="ConnectButton" Content="Connect" HorizontalAlignment="Left" Height="35" Margin="20,36,0,0" VerticalAlignment="Top" Width="193" Click="Button_Click"/>
-        <TextBox x:Name="MainText" HorizontalAlignment="Left" Height="354" Margin="437,36,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="324" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" 
-                 Text="This tool is for Lync\SfB user management purposes.
-                  1. Start Nectar, go to Connection Broker of the customer, Launch 'SfB user management' Connection.                   
-                  2. Go back to this tool, click Connect. Wait for successfull connection.                                                                            
-                  3. Type user name or SIP into search box, click Search.
-                  4. Change required user attributes, click Update. Or change user's PIN                                                                     
-                 Please contact Andrew Ilin if you have any questions
+        <Button x:Name="ConnectButton" Content="Connect" HorizontalAlignment="Left" Height="35" Margin="20,22,0,0" VerticalAlignment="Top" Width="193" Click="Button_Click"/>
+        <TextBox x:Name="MainText" HorizontalAlignment="Left" Height="354" Margin="417,36,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="344" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" 
+                 Text="This tool is for SfBO user management purposes.                  
+                  1. Click Connect. Wait for a successfull connection.                                                                            
+                  2. Type user name/SIP into search box, click Search. Or search by a number                                                
+                  3. Change required user attributes, click Update. Or reset user's PIN                                                                     
+
                  
                  " />
-        <Button x:Name="SearchButton" Content="Search" HorizontalAlignment="Left" Margin="286,113,0,0" VerticalAlignment="Top" Width="87" Height="22" Click="Button_Click_2" IsEnabled="False"/>
+        <Button x:Name="SearchButton" Content="Search" HorizontalAlignment="Left" Margin="286,67,0,0" VerticalAlignment="Top" Width="87" Height="22" Click="Button_Click_2" IsEnabled="False"/>
 
         <Button x:Name="UpdateUserButton" Content="Update" HorizontalAlignment="Left" Height="21" Margin="46,366,0,0" VerticalAlignment="Top" Width="94" Click="UpdateUserButton_Click" IsEnabled="False"/>
 
@@ -26,9 +25,9 @@
 
         <!-- Text box for entering user sip with TextBlock as search watermark -->
 
-        <Grid Margin="30,-117,-30,117">
-            <TextBox  x:Name="SearchUserTextBox" Width="235"  VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5" BorderThickness="3"/>
-            <TextBlock IsHitTestVisible="False" Text="Search for a user by typing a user's sip" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0" Foreground="DarkGray">
+        <Grid Margin="0,0,0,0">
+            <TextBox  x:Name="SearchUserTextBox"  BorderThickness="3" Margin="28,67,520.6,391.6" />
+            <TextBlock IsHitTestVisible="False" Text="Enter user's sip/name or number"  Foreground="DarkGray" Margin="35,69,566.6,397.6">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -40,38 +39,39 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-            <Label Content="SIP address:" HorizontalAlignment="Left" Height="30" Margin="11,260,0,0" VerticalAlignment="Top" Width="79"/>
-            <Label Content="sip:" HorizontalAlignment="Left" Height="30" Margin="125,260,0,0" VerticalAlignment="Top" Width="32"/>
-            <TextBox x:Name="SipAddressTextBox" HorizontalAlignment="Left" Height="17" Margin="150,265,0,0" Text="" VerticalAlignment="Top" Width="211"/>
-            <Label Content="Registrar pool:" HorizontalAlignment="Left" Height="30" Margin="11,280,0,0" VerticalAlignment="Top" Width="89"/>
-            <TextBlock x:Name="RegistrarPoolTextBlock" HorizontalAlignment="Left" Height="15" Margin="152,285,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="209"/>
-            <Label Content="Enterprice Voice enabled:" HorizontalAlignment="Left" Height="30" Margin="11,300,0,0" VerticalAlignment="Top" Width="145"/>
-            <CheckBox x:Name="EnterpriseVoiceEnabledCheckBox" Content="CheckBox" HorizontalAlignment="Left" Height="24" Margin="154,306,0,0" VerticalAlignment="Top" Width="20"/>
-            <Label Content="Line URI:" HorizontalAlignment="Left" Height="30" Margin="11,320,0,0" VerticalAlignment="Top" Width="59"/>
-            <Label Content="tel:" HorizontalAlignment="Left" Height="30" Margin="125,320,0,0" VerticalAlignment="Top" Width="32"/>
-            <TextBox x:Name="LineURITextBox" HorizontalAlignment="Left" Height="17" Margin="150,324,0,0" Text="" VerticalAlignment="Top" Width="211" />
-            <Label Content="ConferencingPolicy:" HorizontalAlignment="Left" Height="28" Margin="11,340,0,0" VerticalAlignment="Top" Width="115"/>
-            <Label Content="VoicePolicy:" HorizontalAlignment="Left" Height="30" Margin="11,365,0,0" VerticalAlignment="Top" Width="115"/>
-            <Label Content="ExternalAccessPolicy:" HorizontalAlignment="Left" Height="30" Margin="11,390,0,0" VerticalAlignment="Top" Width="135"/>
-            <Label Content="HostedVoicemailPolicy:" HorizontalAlignment="Left" Height="30" Margin="11,415,0,0" VerticalAlignment="Top" Width="135"/>
-            <Label Content="MobilityPolicy:" HorizontalAlignment="Left" Height="30" Margin="11,440,0,0" VerticalAlignment="Top" Width="115"/>
-            <ComboBox x:Name="ConferencingPolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,346,0,0" VerticalAlignment="Top" Width="166" />
-            <ComboBox x:Name="VoicePolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,371,0,0" VerticalAlignment="Top" Width="166"/>
-            <ComboBox x:Name="ExternalAccessPolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,396,0,0" VerticalAlignment="Top" Width="166"/>
-            <ComboBox x:Name="HostedVoicemailPolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,421,0,0" VerticalAlignment="Top" Width="166"/>
-            <ComboBox x:Name="MobilityPolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,446,0,0" VerticalAlignment="Top" Width="166" VerticalContentAlignment="Bottom"/>
-            <Button x:Name="ViewConferencingPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,346,0,0" VerticalAlignment="Top" Width="71" Click="ViewConferencingPolicyButton_Click" IsEnabled="False"/>
-            <Button x:Name="ViewVoicePolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,371,0,0" VerticalAlignment="Top" Width="71" Click="ViewVoicePolicyButton_Click" IsEnabled="False"/>
-            <Button x:Name="ViewExternalAccessPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,396,0,0" VerticalAlignment="Top" Width="71" Click="ViewExternalAccessPolicyButton_Click" IsEnabled="False"/>
-            <Button x:Name="ViewHostedVoicemailPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,421,0,0" VerticalAlignment="Top" Width="71" Click="ViewHostedVoicemailPolicyButton_Click" IsEnabled="False"/>
-            <Button x:Name="ViewMobilityPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,446,0,0" VerticalAlignment="Top" Width="71" Click="ViewMobilityPolicyButton_Click" IsEnabled="False"/>
-            <Label Content="Hosted Voicemail:" HorizontalAlignment="Left" Height="30" Margin="221,300,0,0" VerticalAlignment="Top" Width="145"/>
-            <CheckBox x:Name="HostedVoicemailCheckBox" Content="CheckBox" HorizontalAlignment="Left" Height="24" Margin="324,306,0,0" VerticalAlignment="Top" Width="20"/>
-
             <!--   <Border BorderBrush="Black" BorderThickness="0.3" HorizontalAlignment="Left" Height="300" Margin="-10,207,0,-30.2" VerticalAlignment="Top" Width="412"/>
            -->
         </Grid>
-        
+        <Label Content="SIP address:" HorizontalAlignment="Left" Height="30" Margin="11,141,0,0" VerticalAlignment="Top" Width="79"/>
+        <Label Content="sip:" HorizontalAlignment="Left" Height="30" Margin="125,141,0,0" VerticalAlignment="Top" Width="32"/>
+        <TextBox x:Name="SipAddressTextBox" HorizontalAlignment="Left" Height="17" Margin="150,146,0,0" Text="" VerticalAlignment="Top" Width="211"/>
+        <Label Content="Registrar pool:" HorizontalAlignment="Left" Height="30" Margin="11,161,0,0" VerticalAlignment="Top" Width="89"/>
+        <TextBlock x:Name="RegistrarPoolTextBlock" HorizontalAlignment="Left" Height="15" Margin="152,166,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="209"/>
+        <Label Content="Enterprice Voice enabled:" HorizontalAlignment="Left" Height="30" Margin="11,181,0,0" VerticalAlignment="Top" Width="145"/>
+        <CheckBox x:Name="EnterpriseVoiceEnabledCheckBox" Content="CheckBox" HorizontalAlignment="Left" Height="24" Margin="154,187,0,0" VerticalAlignment="Top" Width="20"/>
+        <Label Content="Line URI:" HorizontalAlignment="Left" Height="30" Margin="11,201,0,0" VerticalAlignment="Top" Width="59"/>
+        <Label Content="tel:" HorizontalAlignment="Left" Height="30" Margin="125,201,0,0" VerticalAlignment="Top" Width="32"/>
+        <TextBox x:Name="LineURITextBox" HorizontalAlignment="Left" Height="17" Margin="150,205,0,0" Text="" VerticalAlignment="Top" Width="211" />
+        <Label Content="ConferencingPolicy:" HorizontalAlignment="Left" Height="28" Margin="11,221,0,0" VerticalAlignment="Top" Width="115"/>
+        <Label Content="VoicePolicy:" HorizontalAlignment="Left" Height="30" Margin="11,246,0,0" VerticalAlignment="Top" Width="115"/>
+        <Label Content="ExternalAccessPolicy:" HorizontalAlignment="Left" Height="30" Margin="11,271,0,0" VerticalAlignment="Top" Width="135"/>
+        <Label Content="HostedVoicemailPolicy:" HorizontalAlignment="Left" Height="30" Margin="11,296,0,0" VerticalAlignment="Top" Width="135"/>
+        <Label Content="MobilityPolicy:" HorizontalAlignment="Left" Height="30" Margin="11,321,0,0" VerticalAlignment="Top" Width="115"/>
+        <ComboBox x:Name="ConferencingPolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,227,0,0" VerticalAlignment="Top" Width="166" />
+        <ComboBox x:Name="VoicePolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,252,0,0" VerticalAlignment="Top" Width="166"/>
+        <ComboBox x:Name="ExternalAccessPolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,277,0,0" VerticalAlignment="Top" Width="166"/>
+        <ComboBox x:Name="HostedVoicemailPolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,302,0,0" VerticalAlignment="Top" Width="166"/>
+        <ComboBox x:Name="MobilityPolicyComboBox" HorizontalAlignment="Left" Height="21" Margin="150,327,0,0" VerticalAlignment="Top" Width="166" VerticalContentAlignment="Bottom"/>
+        <Button x:Name="ViewConferencingPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,227,0,0" VerticalAlignment="Top" Width="71" Click="ViewConferencingPolicyButton_Click" IsEnabled="False"/>
+        <Button x:Name="ViewVoicePolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,252,0,0" VerticalAlignment="Top" Width="71" Click="ViewVoicePolicyButton_Click" IsEnabled="False"/>
+        <Button x:Name="ViewExternalAccessPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,277,0,0" VerticalAlignment="Top" Width="71" Click="ViewExternalAccessPolicyButton_Click" IsEnabled="False"/>
+        <Button x:Name="ViewHostedVoicemailPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,302,0,0" VerticalAlignment="Top" Width="71" Click="ViewHostedVoicemailPolicyButton_Click" IsEnabled="False"/>
+        <Button x:Name="ViewMobilityPolicyButton" Content="View policy" HorizontalAlignment="Left" Height="21" Margin="325,327,0,0" VerticalAlignment="Top" Width="71" Click="ViewMobilityPolicyButton_Click" IsEnabled="False"/>
+        <Label Content="Hosted Voicemail:" HorizontalAlignment="Left" Height="30" Margin="221,181,0,0" VerticalAlignment="Top" Width="145"/>
+        <CheckBox x:Name="HostedVoicemailCheckBox" Content="CheckBox" HorizontalAlignment="Left" Height="24" Margin="324,187,0,0" VerticalAlignment="Top" Width="20"/>
+        <Label Content="HybridPstnSite:" HorizontalAlignment="Left" Height="28" Margin="11,111,0,0" VerticalAlignment="Top" Width="115"/>
+        <ComboBox x:Name="HybridPstnSiteComboBox" HorizontalAlignment="Left" Height="21" Margin="150,119,0,0" VerticalAlignment="Top" Width="166" />
+        <CheckBox x:Name="SearchByPhoneCheckBox" Content="Search by a phone number" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="35,93,0,0"/>
 
     </Grid>
 </Window>
