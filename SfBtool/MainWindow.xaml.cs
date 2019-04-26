@@ -11,6 +11,7 @@ using System.Security;
 using System.Threading;
 using System.Windows.Threading;
 using System.Collections;
+using System.Text.RegularExpressions;
 
 namespace SfBtool
 {
@@ -23,15 +24,27 @@ namespace SfBtool
         static Runspace runspace;
 
         //timer to prevent PS session timeout
-        System.Timers.Timer Idletimer = new System.Timers.Timer(45 * 1000);
+        System.Timers.Timer Idletimer;
+        int PSSessionTimeOut = 45 * 60 * 1000; //in ms
+        short NumberOfPSReconnectionsCurrent = 0, NumberOfPSReconnectionsThreshold = 14;
 
         static bool ConnectionFlag = false;
 
         //user attributes
-        string Identity, SipAddress, RegistrarPool, LineURI;
+        string Identity, SipAddress, RegistrarPool, LineURI, ADPhone;
 
-        Hashtable UserPolicies = new Hashtable();
-        bool EnterpriseVoiceEnabled, HostedVoicemail;
+        Hashtable UserPoliciesOfFoundUser = new Hashtable();
+        bool EnterpriseVoiceEnabled, HostedVoicemail, AllowInternational;
+
+        //tenant policies
+        List<string> TenantDialPlans = new List<string>();
+        List<string> TenantConferencingPolicies = new List<string>();
+        List<string> TenantVoicePolicies = new List<string>();
+        List<string> TenantExternalAccessPolicies = new List<string>();
+        List<string> TenantHostedVoicemailPolicies = new List<string>();
+        List<string> TenantMobilityPolicies = new List<string>();
+
+        List<string> TenantHybridPSTNSites = new List<string>();
 
         private string password;
         private string userName;
@@ -67,8 +80,17 @@ namespace SfBtool
 
  private void PSconnection()
         {
+            //clear tenant policies from previous connection
+            TenantDialPlans.Clear();
+            TenantHybridPSTNSites.Clear();
+            TenantConferencingPolicies.Clear();
+            TenantVoicePolicies.Clear();
+            TenantExternalAccessPolicies.Clear();
+            TenantHostedVoicemailPolicies.Clear();
+            TenantMobilityPolicies.Clear();
 
             string returnstring="";
+            ConnectionFlag = false;
 
          //  System.Uri uri = new Uri("https://localhost:12346/ocspowershell");
             System.Security.SecureString securePassword = String2SecureString(password);
@@ -210,22 +232,27 @@ namespace SfBtool
                     ConnectionFlag = false;
                     return;
                 }
-               
+
                 //successfull connection
                 if (powershell.Streams.Error.Count == 0)
                 {
-                    AppendMainText("Successfully connected to " + 
-                            results.First().Properties["DisplayName"].Value.ToString() + "tenant .Search for a user and " +
-                                    "change required attributes" + ".\n");
+                    AppendMainText("Successfully connected to " +
+                            results.First().Properties["DisplayName"].Value.ToString() + "tenant " + "\n");
+                    //retrive tenant policies info 
+                    AppendMainText("Getting tenant information" + "\n");
+                    GetPolicyInfo();
+                    AppendMainText("Search for a user and " +
+                                            "change required attributes" + ".\n") ;
                     ConnectionFlag = true;
                     //update buttons
                     UpdateButton("ConnectButton", false, "Connected");
                     UpdateButton("SearchButton", true, "");
 
-                    //start timer to prevent a session timeout
-                    Idletimer.Elapsed += new System.Timers.ElapsedEventHandler(OnElapsed);
-                    Idletimer.AutoReset = false;
-                    Idletimer.Start();
+                        //start timer to prevent a session timeout
+                        Idletimer = new System.Timers.Timer(PSSessionTimeOut);
+                        Idletimer.Elapsed += new System.Timers.ElapsedEventHandler(OnElapsed);
+                        Idletimer.AutoReset = false;
+                        Idletimer.Start();
 
                 }
 
@@ -256,18 +283,45 @@ namespace SfBtool
                 if (!ConnectionFlag)
                 {
                     //PSExecute("Remove-Variable ra");
+                    PSDisconnect();
                     UpdateButton("ConnectButton", true, "Connect");
-                    UpdateButton("SearchButton", false, "");
-
-                    // dispose the runspace and enable garbage collection if connection was unsuccessfull
-                    runspace.Dispose();
-                    runspace = null;
                 }
 
             }
         }
 
-        private void Idletimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        //disconnect current PS session and disable buttons
+        private void PSDisconnect()
+        {
+            //disable functional buttons
+            UpdateButton("ConnectButton", false, "");
+            UpdateButton("SearchButton", false, "");
+            UpdateButton("ViewConferencingPolicyButton", false, "");
+            UpdateButton("ViewTenantDialPlanButton", false, "");
+            UpdateButton("ViewExternalAccessPolicyButton", false, "");
+            UpdateButton("ViewHostedVoicemailPolicyButton", false, "");
+            UpdateButton("ViewMobilityPolicyButton", false, "");
+            UpdateButton("ViewVoicePolicyButton", false, "");
+            UpdateButton("UpdateUserButton", false, "");
+            UpdateButton("ResetPinButton", false, "");
+            UpdateButton("GetPhoneFromAD", false, "");
+
+            ConnectionFlag = false;
+
+
+            PSExecute("Get-PSSession | Remove-PSSession");
+            // dispose the runspace and enable garbage collection
+            if (runspace != null)
+            {
+                runspace.Dispose();
+                runspace = null;
+            }
+
+            AppendMainText("\nPS session was removed\n");
+
+        }
+
+    private void Idletimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             throw new NotImplementedException();
         }
@@ -279,50 +333,46 @@ namespace SfBtool
 
             try
             {
-                List<string> _ConferencingPolicy = new List<string>();
+                results = PSExecute("Get-CsTenantDialPlan");
+                foreach (PSObject PSresult in results)
+                {
+                    TenantDialPlans.Add(PSresult.Properties["Identity"].Value.ToString());
+                }               
+                results = PSExecute("Get-CsHybridPSTNSite");
+                //adding "None" as the first HybridPSTNSite
+                TenantHybridPSTNSites.Add("None");
+                if (results != null)
+                {
+                    foreach (PSObject PSresult in results)
+                    {
+                        TenantHybridPSTNSites.Add(PSresult.Properties["Identity"].Value.ToString());
+                    }
+                }
                 results = PSExecute("Get-CsConferencingPolicy");
                 foreach (PSObject PSresult in results)
                 {
-                    _ConferencingPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                    TenantConferencingPolicies.Add(PSresult.Properties["Identity"].Value.ToString());
                 }
-
-                ConferencingPolicyComboBox.ItemsSource = _ConferencingPolicy;
-
-                List<string> _VoicePolicy = new List<string>();
                 results = PSExecute("Get-CsVoicePolicy");
                 foreach (PSObject PSresult in results)
                 {
-                    _VoicePolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                    TenantVoicePolicies.Add(PSresult.Properties["Identity"].Value.ToString());
                 }
-
-                VoicePolicyComboBox.ItemsSource = _VoicePolicy;
-
-                List<string> _ExternalAccessPolicy = new List<string>();
                 results = PSExecute("Get-CsExternalAccessPolicy");
                 foreach (PSObject PSresult in results)
                 {
-                    _ExternalAccessPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                    TenantExternalAccessPolicies.Add(PSresult.Properties["Identity"].Value.ToString());
                 }
-
-                ExternalAccessPolicyComboBox.ItemsSource = _ExternalAccessPolicy;
-
-                List<string> _HostedVoicemailPolicy = new List<string>();
                 results = PSExecute("Get-CsHostedVoicemailPolicy");
                 foreach (PSObject PSresult in results)
                 {
-                    _HostedVoicemailPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                    TenantHostedVoicemailPolicies.Add(PSresult.Properties["Identity"].Value.ToString());
                 }
-
-                HostedVoicemailPolicyComboBox.ItemsSource = _HostedVoicemailPolicy;
-
-                List<string> _MobilityPolicy = new List<string>();
                 results = PSExecute("Get-CsMobilityPolicy");
                 foreach (PSObject PSresult in results)
                 {
-                    _MobilityPolicy.Add(PSresult.Properties["Identity"].Value.ToString());
+                    TenantMobilityPolicies.Add(PSresult.Properties["Identity"].Value.ToString());
                 }
-
-                MobilityPolicyComboBox.ItemsSource = _MobilityPolicy;
             }
 
             catch (Exception ex)
@@ -377,7 +427,7 @@ namespace SfBtool
 
                 // Finally dispose the powershell and set all variables to null to free
                 // up any resources.
-                //powershell.Dispose();
+                // powershell.Dispose();
                 // powershell = null;    
          }
     }
@@ -394,19 +444,33 @@ private static SecureString String2SecureString(string password)
         //search button click
         private void Button_Click_2(object sender, RoutedEventArgs e)
         {
+
+            //AppendMainText("\nSearching, wait...");
+
             //clean attributes from previous user
-            UserPolicies.Clear();
+            UserPoliciesOfFoundUser.Clear();
             Identity = "";
             SipAddress = "";
             RegistrarPool = "";
             LineURI = "";
+            ADPhone = "";
             EnterpriseVoiceEnabled = false;
             HostedVoicemail = false;
+            AllowInternational = false;
+
+            TenantDialPlanComboBox.ItemsSource = null;
+            HybridPstnSiteComboBox.ItemsSource = null;
+            ConferencingPolicyComboBox.ItemsSource = null;
+            VoicePolicyComboBox.ItemsSource = null;
+            ExternalAccessPolicyComboBox.ItemsSource = null;
+            HostedVoicemailPolicyComboBox.ItemsSource = null;
+            MobilityPolicyComboBox.ItemsSource = null;
 
             //update UI
             UpdateUIwithUserAttributes();
 
             //disable functional buttons
+            UpdateButton("ViewTenantDialPlanButton", false, "");
             UpdateButton("ViewConferencingPolicyButton", false, "");
             UpdateButton("ViewExternalAccessPolicyButton", false, "");
             UpdateButton("ViewHostedVoicemailPolicyButton", false, "");
@@ -414,91 +478,174 @@ private static SecureString String2SecureString(string password)
             UpdateButton("ViewVoicePolicyButton", false, "");
             UpdateButton("UpdateUserButton", false, "");
             UpdateButton("ResetPinButton", false, "");
-            
-            //retrive policies info to fill combo boxes items  
-            GetPolicyInfo();
+            UpdateButton("GetPhoneFromAD", false, "");
 
             Collection<PSObject> results = new Collection<PSObject>();
-            results = PSExecute("Get-CsOnlineUser \"" + SearchUserTextBox.Text + "*\"");
+
+            //search by OnPremLineURI if choosen
+            if (SearchByPhoneCheckBox.IsChecked == true)
+            {
+                //if wildcard is specified in the begining of the phone string 
+                if (SearchUserTextBox.Text.StartsWith("*"))
+                {
+                    results = PSExecute("Get-CsOnlineUser -filter{OnPremLineURI -like \"" + SearchUserTextBox.Text + "\"}");
+                }
+                else
+                {
+                    results = PSExecute("Get-CsOnlineUser -filter{OnPremLineURI -like \"tel:" + SearchUserTextBox.Text + "\"}");
+                }
+            }
+            else
+            {
+                results = PSExecute("Get-CsOnlineUser \"" + SearchUserTextBox.Text + "\"");
+            }
 
             try
             {
-
-                //check whether more than one user was found
-                if (results.Count > 1)
+                if (results != null)
                 {
-                    AppendMainText("\nFollowing users were found, please type exact SIP address of a user" + "\n");
-
-                    foreach (PSObject PSresult in results)
+                    //check whether more than one user was found
+                    if (results.Count > 1)
                     {
-                        AppendMainText(PSresult.Properties["SipAddress"].Value.ToString() + "\n");
-                    }
-                }
-                //one user is expected
-                else if (results.Count == 1)
-                {
+                        AppendMainText("\nFollowing users were found, please type exact SIP address or number of a user" + "\n");
 
-                    //show all user info in the main box
-                    AppendMainText("\nAll attributes of found user:" + "\n");
-                    foreach (PSPropertyInfo PSpr in results.First().Properties)
-                    {
-                        AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
-                    }
-
-                    //get user info
-                    Identity = results.First().Properties["Identity"].Value.ToString();
-                    SipAddress = results.First().Properties["SipAddress"].Value.ToString();
-                    RegistrarPool = results.First().Properties["RegistrarPool"].Value.ToString();
-                    if (results.First().Properties["EnterpriseVoiceEnabled"].Value.ToString() == "True")
-                    {
-                        EnterpriseVoiceEnabled = true;
-                    }
-
-                    if (results.First().Properties["HostedVoiceMail"].Value != null)
-                    {
-                        if (results.First().Properties["HostedVoiceMail"].Value.ToString() == "True")
+                        foreach (PSObject PSresult in results)
                         {
-                            HostedVoicemail = true;
+                            AppendMainText(PSresult.Properties["SipAddress"].Value.ToString() + "\n");
+                            AppendMainText(PSresult.Properties["OnPremLineURI"].Value.ToString() + "\n");
                         }
                     }
-                
-
-                    //check - if lineuri is null set up an empty string 
-                    if (results.First().Properties["OnPremLineURI"].Value == null)
+                    //one user is expected
+                    else if (results.Count == 1)
                     {
-                        LineURI = "";
+
+
+                        AppendMainText("\nFollowing user was found" + "\n");
+                        //show only following attributes of a user in main window text box
+                        string[] UserAttributesToDisplay = { "Company", "Department", "Description", "IPPhone", "City", "MobilePhone",
+                                        "Office", "Title", "Phone", "UsageLocation", "OnPremLineURI", "UserPrincipalName", "DisplayName", "SipAddress",
+                                        "Enabled", "EnterpriseVoiceEnabled", "HostedVoicemail", "DialPlan", "TenantDialPlan" };
+                        foreach (string AttrName in UserAttributesToDisplay)
+                        {
+                            AppendMainText(AttrName + " : " + results.First().Properties[AttrName].Value + "\n");
+                        }
+
+                        /*
+                        //show all user info in the main box
+                        AppendMainText("\nAll attributes of found user:" + "\n");
+                        foreach (PSPropertyInfo PSpr in results.First().Properties)
+                        {
+                            AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
+                        }
+                        */
+
+                        //get user info
+                        Identity = results.First().Properties["Identity"].Value.ToString();
+                        SipAddress = results.First().Properties["SipAddress"].Value.ToString();
+                        //if the user sfbo enabled, return pool name, otherwise "The user isn't Enabled" string
+                        RegistrarPool = (results.First().Properties["Enabled"].Value.ToString() == "True") ?
+                            results.First().Properties["RegistrarPool"].Value.ToString() : "The user isn't Enabled";
+                        //get AD Phone attribute, remove spaces if any and add + sign if its absent
+                        ADPhone = results.First().Properties["Phone"].Value.ToString();
+                        ADPhone = String.IsNullOrEmpty(results.First().Properties["Phone"].Value.ToString()) ?
+                                   "" : Regex.Replace(ADPhone, " ", "");
+                        if ((!ADPhone.StartsWith("+")) && (ADPhone != ""))
+                        {
+                            ADPhone = "+" + ADPhone;
+                        }
+                        string _tempHybridPstnSiteName = "None"; //the value will be assigned later  
+                        //if policies are null or empty, the user has Global policy
+                        string _tempTenantDialPlan = (results.First().Properties["TenantDialPlan"].Value == null) ?
+                                    "Global" : "Tag:" + results.First().Properties["TenantDialPlan"].Value.ToString();
+                        string _tempConferencingPolicy = results.First().Properties["ConferencingPolicy"].Value == null ?
+                                    "Global" : "Tag:" + results.First().Properties["ConferencingPolicy"].Value.ToString();
+                        string _tempVoicePolicy = (results.First().Properties["VoicePolicy"].Value == null) ?
+                                    "Global" : "Tag:" + results.First().Properties["VoicePolicy"].Value.ToString();
+                        string _tempExternalAccessPolicy = (results.First().Properties["ExternalAccessPolicy"].Value == null) ?
+                                    "Global" : "Tag:" + results.First().Properties["ExternalAccessPolicy"].Value.ToString();
+                        string _tempHostedVoicemailPolicy = (results.First().Properties["HostedVoicemailPolicy"].Value == null) ? 
+                                    "Global" : "Tag:" + results.First().Properties["HostedVoicemailPolicy"].Value.ToString();
+                        string _tempMobilityPolicy = (results.First().Properties["MobilityPolicy"].Value == null) ?
+                                    "Global" : "Tag:" + results.First().Properties["MobilityPolicy"].Value.ToString();
+                        if (results.First().Properties["EnterpriseVoiceEnabled"].Value.ToString() == "True")
+                        {
+                            EnterpriseVoiceEnabled = true;
+                        }
+                        //international calls will be allowed if OnlineDialOutPolicy is empty or has DialoutCPCandPSTNInternational value
+                        if (results.First().Properties["OnlineDialOutPolicy"].Value == null)
+                        {
+                            AllowInternational = true;
+                        }
+                        else
+                        {
+                            if (results.First().Properties["OnlineDialOutPolicy"].Value.ToString() == "DialoutCPCandPSTNInternational")
+                            {
+                                AllowInternational = true;
+                            }
+                        }
+                        if (results.First().Properties["HostedVoiceMail"].Value != null)
+                        {
+                            if (results.First().Properties["HostedVoiceMail"].Value.ToString() == "True")
+                            {
+                                HostedVoicemail = true;
+                            }
+                        }
+
+
+                        //check - if lineuri is null set up an empty string 
+                        if (results.First().Properties["OnPremLineURI"].Value == null)
+                        {
+                            LineURI = "";
+                        }
+                        else
+                        {
+                            LineURI = results.First().Properties["OnPremLineURI"].Value.ToString();
+                        }
+
+                        //getting user's Hybrid Pstn Site Name
+                        results = PSExecute("Get-CsUserPstnSettings -Identity \"" + Identity + "\"");
+                        //one object is expected
+                        if (results.Count == 1)
+                        {
+                            //if the user doesnt have a HybridPstnSite assigned, return "None"
+                            _tempHybridPstnSiteName = String.IsNullOrEmpty(results.First().Properties["HybridPstnSiteName"].Value.ToString()) ?
+                                   _tempHybridPstnSiteName = "None" : _tempHybridPstnSiteName = results.First().Properties["HybridPstnSiteName"].Value.ToString();
+                        }
+
+                        //add effective user policies to user's hashtable
+                        UserPoliciesOfFoundUser.Add("TenantDialPlan", _tempTenantDialPlan);
+                        UserPoliciesOfFoundUser.Add("HybridPstnSiteName", _tempHybridPstnSiteName);
+                        UserPoliciesOfFoundUser.Add("ConferencingPolicy", _tempConferencingPolicy);
+                        UserPoliciesOfFoundUser.Add("VoicePolicy", _tempVoicePolicy);
+                        UserPoliciesOfFoundUser.Add("ExternalAccessPolicy", _tempExternalAccessPolicy);
+                        UserPoliciesOfFoundUser.Add("HostedVoicemailPolicy", _tempHostedVoicemailPolicy);
+                        UserPoliciesOfFoundUser.Add("MobilityPolicy", _tempMobilityPolicy);
+
+                        //update UI (fill neccessary attributes in action block (left section)) and fill's combo boxes items with tenant policies 
+                        UpdateUIwithUserAttributes();
+                        //enable functional buttons
+                        UpdateButton("ViewTenantDialPlanButton", true, "");
+                        UpdateButton("ViewConferencingPolicyButton", true, "");
+                        UpdateButton("ViewExternalAccessPolicyButton", true, "");
+                        UpdateButton("ViewHostedVoicemailPolicyButton", true, "");
+                        UpdateButton("ViewMobilityPolicyButton", true, "");
+                        UpdateButton("ViewVoicePolicyButton", true, "");
+                        UpdateButton("UpdateUserButton", true, "Update");
+                        UpdateButton("ResetPinButton", true, "");
+                        UpdateButton("GetPhoneFromAD", true, "");
+
                     }
+
                     else
                     {
-                        LineURI = results.First().Properties["OnPremLineURI"].Value.ToString();
-                    }              
-
-                    //get effective user policies
-                    UserPolicies.Add("ConferencingPolicy", results.First().Properties["ConferencingPolicy"].Value.ToString());
-                    UserPolicies.Add("VoicePolicy", results.First().Properties["VoicePolicy"].Value.ToString());
-                    UserPolicies.Add("ExternalAccessPolicy", results.First().Properties["ExternalAccessPolicy"].Value.ToString());
-                    UserPolicies.Add("HostedVoicemailPolicy", results.First().Properties["HostedVoicemailPolicy"].Value.ToString());
-                    UserPolicies.Add("MobilityPolicy", results.First().Properties["MobilityPolicy"].Value.ToString());
-
-                    //update UI (fill neccessary attributes in action block (left section))
-                    UpdateUIwithUserAttributes();
-
-                    //enable functional buttons
-                    UpdateButton("ViewConferencingPolicyButton", true, "");
-                    UpdateButton("ViewExternalAccessPolicyButton", true, "");
-                    UpdateButton("ViewHostedVoicemailPolicyButton", true, "");
-                    UpdateButton("ViewMobilityPolicyButton", true, "");
-                    UpdateButton("ViewVoicePolicyButton", true, "");
-                    UpdateButton("UpdateUserButton", true, "Update");
-                    UpdateButton("ResetPinButton", true, "");
-
+                        AppendMainText("\nNo users were found\n");
+                    }
                 }
-
                 else
                 {
-                    AppendMainText("\nNo users were found\n");
+                    AppendMainText("\nSome error occured, try again\n");
                 }
-
+             
             }
 
             catch (Exception ex)
@@ -511,6 +658,7 @@ private static SecureString String2SecureString(string password)
         private void UpdateUserButton_Click(object sender, RoutedEventArgs e)
         {
             bool IsSipAddressChanged = false,
+                 IsHybridPstnSiteNameChanged = false,
                  //   IsRegistrarPoolChanged = false, 
                  IsLineURIChanged = false,
                  IsEnterpriseVoiceEnabledChanged = false,
@@ -519,7 +667,9 @@ private static SecureString String2SecureString(string password)
                  IsVoicePolicyChanged = false,
                  IsExternalAccessPolicyChanged = false,
                  IsHostedVoicemailPolicyChanged = false,
-                 IsMobilityPolicyChanged = false;
+                 IsMobilityPolicyChanged = false,
+                 IsTenantDialPlanChanged = false,
+                 IsAllowInternationalChanged = false;
             string ChangedAttr = "";
 
 
@@ -532,9 +682,9 @@ private static SecureString String2SecureString(string password)
 
             //if (RegistrarPoolTextBlock.Text == RegistrarPool);
 
-            if (LineURITextBox.Text != (String.IsNullOrEmpty(LineURI) ? LineURI : LineURI.Remove(0, 4)))
+            if (LineURITextBox.Text != (String.IsNullOrEmpty(LineURI) ? LineURI : LineURI.Remove(0, 4)))                 
             {
-                ChangedAttr += "\nLine URI from " + LineURI + " to tel:" + LineURITextBox.Text + "\n";
+                ChangedAttr += "\nLine URI from " + LineURI + " to " + LineURITextBox.Text + "\n";
                 IsLineURIChanged = true;
             }
 
@@ -552,42 +702,66 @@ private static SecureString String2SecureString(string password)
                 IsHostedVoicemailChanged = true;
             }
 
-            //check conf pol
-            if (ConferencingPolicyComboBox.SelectedValue != UserPolicies["ConferencingPolicy"])
+            if (AllowInternationalCheckBox.IsChecked != AllowInternational)
             {
-                ChangedAttr += "\nConf policy from " + UserPolicies["ConferencingPolicy"] + 
+                ChangedAttr += "\nAllow international from " + AllowInternational.ToString() +
+                    " to " + AllowInternationalCheckBox.IsChecked.ToString() + "\n";
+                IsAllowInternationalChanged = true;
+            }
+
+            //check HybridPstnSite
+            if (HybridPstnSiteComboBox.SelectedValue != UserPoliciesOfFoundUser["HybridPstnSiteName"])
+            {
+                ChangedAttr += "\nPstn Site from " + UserPoliciesOfFoundUser["HybridPstnSiteName"] +
+                    " to " + HybridPstnSiteComboBox.SelectedValue + "\n";
+                IsHybridPstnSiteNameChanged = true;
+            }
+
+            //check TenantDialPlan
+            if (TenantDialPlanComboBox.SelectedValue != UserPoliciesOfFoundUser["TenantDialPlan"])
+            {
+                ChangedAttr += "\nTenant Dial Plan from " + UserPoliciesOfFoundUser["TenantDialPlan"] +
+                    " to " + TenantDialPlanComboBox.SelectedValue + "\n";
+                IsTenantDialPlanChanged = true;
+            }
+
+
+            //check conf pol
+            if (ConferencingPolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["ConferencingPolicy"])
+            {
+                ChangedAttr += "\nConf policy from " + UserPoliciesOfFoundUser["ConferencingPolicy"] + 
                     " to " + ConferencingPolicyComboBox.SelectedValue + "\n";
                 IsConferencingPolicyChanged = true;
             }
 
             //voice pol
-            if (VoicePolicyComboBox.SelectedValue != UserPolicies["VoicePolicy"])
+            if (VoicePolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["VoicePolicy"])
             {
-                ChangedAttr += "\nVoice policy from " + UserPolicies["VoicePolicy"] + 
+                ChangedAttr += "\nVoice policy from " + UserPoliciesOfFoundUser["VoicePolicy"] + 
                     " to " + VoicePolicyComboBox.SelectedValue + "\n";
                 IsVoicePolicyChanged = true;
             }
 
             //ExternalAccess
-            if (ExternalAccessPolicyComboBox.SelectedValue != UserPolicies["ExternalAccessPolicy"])
+            if (ExternalAccessPolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["ExternalAccessPolicy"])
             {
-                ChangedAttr += "\nExternal Access policy from " + UserPolicies["ExternalAccessPolicy"] + 
+                ChangedAttr += "\nExternal Access policy from " + UserPoliciesOfFoundUser["ExternalAccessPolicy"] + 
                     " to " + ExternalAccessPolicyComboBox.SelectedValue + "\n";
                 IsExternalAccessPolicyChanged = true;
             }
 
             //HostedVM
-            if (HostedVoicemailPolicyComboBox.SelectedValue != UserPolicies["HostedVoicemailPolicy"])
+            if (HostedVoicemailPolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["HostedVoicemailPolicy"])
             {
-                ChangedAttr += "\nHosted VM policy from " + UserPolicies["HostedVoicemailPolicy"] + 
+                ChangedAttr += "\nHosted VM policy from " + UserPoliciesOfFoundUser["HostedVoicemailPolicy"] + 
                     " to " + HostedVoicemailPolicyComboBox.SelectedValue + "\n";
                 IsHostedVoicemailPolicyChanged = true;
             }
 
             //mobility pol
-            if (MobilityPolicyComboBox.SelectedValue != UserPolicies["MobilityPolicy"])
+            if (MobilityPolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["MobilityPolicy"])
             {
-                ChangedAttr += "\nMobility policy from " + UserPolicies["MobilityPolicy"] +
+                ChangedAttr += "\nMobility policy from " + UserPoliciesOfFoundUser["MobilityPolicy"] +
                     " to " + MobilityPolicyComboBox.SelectedValue + "\n";
                 IsMobilityPolicyChanged = true;
             }
@@ -597,24 +771,28 @@ private static SecureString String2SecureString(string password)
                IsLineURIChanged ||
                IsEnterpriseVoiceEnabledChanged ||
                IsHostedVoicemailChanged ||
+               IsHybridPstnSiteNameChanged ||
                IsConferencingPolicyChanged ||
                IsVoicePolicyChanged ||
                IsExternalAccessPolicyChanged ||
                IsHostedVoicemailPolicyChanged ||
-               IsMobilityPolicyChanged)
+               IsMobilityPolicyChanged ||
+               IsTenantDialPlanChanged ||
+               IsAllowInternationalChanged)
             {
                 //if confirmed, run set-csuser and\ or grant policies
                 if (MessageBox.Show("Do you really want to change following attributes for the "
-                    + SipAddress + " user? (if Global or Site: policies are chosen, the user " +
-                    "will be granted with automatic policy)\n" + ChangedAttr,
+                    + SipAddress + " user?\n" + ChangedAttr,
                     "Confirm",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Information, MessageBoxResult.No) == MessageBoxResult.Yes)
                 {
+                    //start of set-csuser block
+
                     if (IsSipAddressChanged)
                     {
                         Collection<PSObject> result = new Collection<PSObject>();
-                        result = PSExecute("Set-CsUser -Identity '" + Identity + 
+                        result = PSExecute("Set-CsUser -Identity '" + Identity +
                             "'" + " -SipAddress 'sip:" + SipAddressTextBox.Text + "'");
 
                         if (result != null)
@@ -628,8 +806,10 @@ private static SecureString String2SecureString(string password)
                         }
                     }
 
-                    if (IsLineURIChanged)
+                    //run set-csuser once if all 3 parameters were changed
+                    if (IsLineURIChanged && IsEnterpriseVoiceEnabledChanged && IsHostedVoicemailChanged)
                     {
+                        Collection<PSObject> result = new Collection<PSObject>();
                         string NewLineURI;
                         //if lineuri string is empty, set argument as $null
                         if (String.IsNullOrEmpty(LineURITextBox.Text))
@@ -640,12 +820,98 @@ private static SecureString String2SecureString(string password)
                         {
                             NewLineURI = "'tel:" + LineURITextBox.Text + "'";
                         }
-                        Collection<PSObject> result = new Collection<PSObject>();
-                        result = PSExecute("Set-CsUser -Identity '" + Identity + "'" + "-OnPremLineURI " + NewLineURI);
+                        result = PSExecute("Set-CsUser -Identity '" + Identity + "'" +
+                               "-OnPremLineURI " + NewLineURI + " -EnterpriseVoiceEnabled $" + (!EnterpriseVoiceEnabled).ToString() +
+                               " -HostedVoicemail $" + (!HostedVoicemail).ToString());
 
                         if (result != null)
                         {
-                            AppendMainText("\nLineURI changed\n");
+                            AppendMainText("\nLineURI changed\n" + "\nEV changed\n" + "\nHosted VM enabled changed\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+
+                    }
+                
+                    //or change one by one
+                    else
+                    {
+                        if (IsLineURIChanged)
+                        {
+                            string NewLineURI;
+                            //if lineuri string is empty, set argument as $null
+                            if (String.IsNullOrEmpty(LineURITextBox.Text))
+                            {
+                                NewLineURI = "$null";
+                            }
+                            else
+                            {
+                                NewLineURI = "'tel:" + LineURITextBox.Text + "'";
+                            }
+
+                            Collection<PSObject> result = new Collection<PSObject>();
+                            result = PSExecute("Set-CsUser -Identity '" + Identity + "'" + "-OnPremLineURI " + NewLineURI);
+
+                            if (result != null)
+                            {
+                                AppendMainText("\nLineURI changed\n");
+                            }
+
+                            else
+                            {
+                                AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                            }
+                        }
+
+                        if (IsEnterpriseVoiceEnabledChanged)
+                        {
+                            Collection<PSObject> result = new Collection<PSObject>();
+                            result = PSExecute("Set-CsUser -Identity '" + Identity +
+                                "'" + " -EnterpriseVoiceEnabled $" + (!EnterpriseVoiceEnabled).ToString());
+
+                            if (result != null)
+                            {
+                                AppendMainText("\nEV changed\n");
+                            }
+
+                            else
+                            {
+                                AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                            }
+                        }
+
+                        if (IsHostedVoicemailChanged)
+                        {
+                            Collection<PSObject> result = new Collection<PSObject>();
+                            result = PSExecute("Set-CsUser -Identity '" + Identity +
+                                "'" + " -HostedVoicemail $" + (!HostedVoicemail).ToString());
+
+                            if (result != null)
+                            {
+                                AppendMainText("\nHosted VM enabled changed\n");
+                            }
+
+                            else
+                            {
+                                AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                            }
+                        }
+                    }
+                    //end of set-csuser block
+
+                    if (IsHybridPstnSiteNameChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+                        if (HybridPstnSiteComboBox.SelectedValue.ToString() != "None")
+                            result = PSExecute("Set-CsUserPstnSettings -Identity '" + Identity + "'"
+                                + " -HybridPSTNSite '" + HybridPstnSiteComboBox.SelectedValue + "'");
+                        else result = PSExecute("Set-CsUserPstnSettings -Identity '" + Identity + "'" + " -HybridPSTNSite $null");
+                        if (result != null)
+                        {
+                            AppendMainText("\nThe user assigned to new Hybrid Pstn Site\n");
                         }
 
                         else
@@ -654,15 +920,16 @@ private static SecureString String2SecureString(string password)
                         }
                     }
 
-                    if (IsEnterpriseVoiceEnabledChanged)
+                    if (IsTenantDialPlanChanged)
                     {
                         Collection<PSObject> result = new Collection<PSObject>();
-                        result = PSExecute("Set-CsUser -Identity '" + Identity + 
-                            "'" + " -EnterpriseVoiceEnabled $" + (!EnterpriseVoiceEnabled).ToString());
-
+                        if (TenantDialPlanComboBox.SelectedValue.ToString() != "Global")
+                            result = PSExecute("Grant-CsTenantDialPlan -Identity '" + Identity + "'"
+                                + " -PolicyName '" + TenantDialPlanComboBox.SelectedValue + "'");
+                        else result = PSExecute("Grant-CsTenantDialPlan -Identity '" + Identity + "'" + " -PolicyName $null");
                         if (result != null)
                         {
-                            AppendMainText("\nEV changed\n");
+                            AppendMainText("\nNew Tenant Dial Plan granted\n");
                         }
 
                         else
@@ -670,23 +937,6 @@ private static SecureString String2SecureString(string password)
                             AppendMainText("\nThe error occured, please find the error details above, try again\n");
                         }
                     }
-
-                    if (IsHostedVoicemailChanged)
-                    {
-                        Collection<PSObject> result = new Collection<PSObject>();
-                        result = PSExecute("Set-CsUser -Identity '" + Identity +
-                            "'" + " -HostedVoicemail $" + (!HostedVoicemail).ToString());
-
-                        if (result != null)
-                        {
-                            AppendMainText("\nHosted VM enabled changed\n");
-                        }
-
-                        else
-                        {
-                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
-                        }
-                    }                  
 
                     if (IsConferencingPolicyChanged)
                     {
@@ -706,6 +956,33 @@ private static SecureString String2SecureString(string password)
                             AppendMainText("\nThe error occured, please find the error details above, try again\n");
                         }
                     }
+
+                    if (IsAllowInternationalChanged)
+                    {
+                        Collection<PSObject> result = new Collection<PSObject>();
+
+                        if (AllowInternationalCheckBox.IsChecked == true)
+                        {
+                            result = PSExecute("Grant-CsDialoutPolicy -Identity '" + Identity + "'"
+                                + " -PolicyName '" + "tag:DialoutCPCandPSTNInternational");
+                        }
+                        else
+                        {
+                            result = PSExecute("Grant-CsDialoutPolicy -Identity '" + Identity + "'"
+                                + " -PolicyName '" + "tag:DialoutCPCandPSTNDomestic");
+                        }
+
+                        if (result != null)
+                        {
+                            AppendMainText("\nAllow International Changed\n");
+                        }
+
+                        else
+                        {
+                            AppendMainText("\nThe error occured, please find the error details above, try again\n");
+                        }
+                    }
+
                     if (IsVoicePolicyChanged)
                     {
                         Collection<PSObject> result = new Collection<PSObject>();
@@ -813,6 +1090,29 @@ private static SecureString String2SecureString(string password)
                 myButton.Content = ChangeContent;
             }       
         }
+        
+        //get Tenant Dial Plan info
+        private void ViewTenantDialPlanButton_Click(object sender, RoutedEventArgs e)
+        {
+            PSObject result = new PSObject();
+
+            try
+            {
+                result = PSExecute("Get-CsTenantDialPlan -Identity '" +
+                            TenantDialPlanComboBox.SelectedValue.ToString() + "'").First();
+                AppendMainText("\nAll properties of " + result.Properties["Identity"].Value.ToString()
+                              + " policy:\n");
+                foreach (PSPropertyInfo PSpr in result.Properties)
+                {
+                    AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendMainText("Following exception happened when getting policy info:\n");
+                AppendMainText("Exception: " + ex.Message.ToString());
+            }
+        }
 
         //get conference policy info
         private void ViewConferencingPolicyButton_Click(object sender, RoutedEventArgs e)
@@ -909,6 +1209,12 @@ private static SecureString String2SecureString(string password)
             }
 
         }
+
+        private void GetPhoneFromAD_Click(object sender, RoutedEventArgs e)
+        {
+            LineURITextBox.Text = ADPhone;
+        }
+
         //get MobilityPolicy info
         private void ViewMobilityPolicyButton_Click(object sender, RoutedEventArgs e)
         {
@@ -965,34 +1271,64 @@ private static SecureString String2SecureString(string password)
 
         private void ResetPinButton_Click(object sender, RoutedEventArgs e)
         {
-                Collection<PSObject> result = new Collection<PSObject>();
-                result = PSExecute("Set-CsOnlineDialInConferencingUser -ResetLeaderPin" +
+                Collection<PSObject> results = new Collection<PSObject>();
+                results = PSExecute("Set-CsOnlineDialInConferencingUser -ResetLeaderPin" +
                                                         " -Identity '" + Identity + "'");
-                if (result != null)
-                     {
-                        foreach (PSPropertyInfo PSpr in result.First().Properties)
-                        {
-                             AppendMainText(PSpr.Name + " " + PSpr.Value + "\n");
-                        }
-                     }
+                if (results != null)
+                {
+
+                AppendMainText("\nThe PIN was reset\n");
+                //show only following attributes of a user in main window text box
+                string[] UserAttributesToDisplay = { "SipAddress", "ServiceNumber", "TollFreeServiceNumber", "ConferenceId", "BridgeName", "LeaderPin" };
+                foreach (string AttrName in UserAttributesToDisplay)
+                    {
+                    AppendMainText(AttrName + " : " + results.First().Properties[AttrName].Value + "\n");
+                    }
+                }
 
                 else
-                     {  
-                        AppendMainText("\nThe error occured, please see details above, try again\n");
-                     }
+                {  
+                    AppendMainText("\nThe error occured, please see details above, try again\n");
+                }
             
         }
 
-        //run command on a remote server to prevent a session timeout
-        private void OnElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        //restart PS session to prevent a session timeout
+        public void OnElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            PSExecute("get-cssipdomain");
-            Idletimer.Start(); // Restart timer
+            AppendMainText("\nThe remote PowerShell session expired");
+
+            //disconnect current PS session and disable buttons
+            PSDisconnect();
+
+            //AppendMainText("\nNumberOfPSReconnectionsCurrent " + NumberOfPSReconnectionsCurrent);
+
+            if (NumberOfPSReconnectionsCurrent < (NumberOfPSReconnectionsThreshold-1))
+            {
+                NumberOfPSReconnectionsCurrent++;
+                AppendMainText("Re-connecting, wait...\n");
+                UpdateButton("ConnectButton", false, "Re-connecting...");
+                //create background thread and start PSconnection
+                Thread t1 = new Thread(new ThreadStart(PSconnection));
+                t1.Start();
+            }
+            else
+            {
+                AppendMainText("\nThe number of PS reconnections was too large, close the program and start it again");
+            }
         }
 
-
+        //update UI (fill neccessary attributes in action block (left section)) and fill's combo boxes items with tenant policies 
         private void UpdateUIwithUserAttributes()
         {
+            TenantDialPlanComboBox.ItemsSource = TenantDialPlans;
+            HybridPstnSiteComboBox.ItemsSource = TenantHybridPSTNSites;
+            ConferencingPolicyComboBox.ItemsSource = TenantConferencingPolicies;
+            VoicePolicyComboBox.ItemsSource = TenantVoicePolicies;
+            ExternalAccessPolicyComboBox.ItemsSource = TenantExternalAccessPolicies;
+            HostedVoicemailPolicyComboBox.ItemsSource = TenantHostedVoicemailPolicies;
+            MobilityPolicyComboBox.ItemsSource = TenantMobilityPolicies;
+
             //remove "sip:" prefix if the string isnt empty 
             SipAddressTextBox.Text = String.IsNullOrEmpty(SipAddress) ?  SipAddress : SipAddress.Remove(0, 4);
             RegistrarPoolTextBlock.Text = RegistrarPool;
@@ -1000,20 +1336,25 @@ private static SecureString String2SecureString(string password)
             LineURITextBox.Text = String.IsNullOrEmpty(LineURI) ? LineURI : LineURI.Remove(0, 4);
             EnterpriseVoiceEnabledCheckBox.IsChecked = EnterpriseVoiceEnabled;
             HostedVoicemailCheckBox.IsChecked = HostedVoicemail;
+            AllowInternationalCheckBox.IsChecked = AllowInternational;
 
-            if (UserPolicies != null)
+            if (UserPoliciesOfFoundUser != null)
             {
                 //select effective policies for current user in the comboboxes
-                ConferencingPolicyComboBox.SelectedValue = UserPolicies["ConferencingPolicy"];
-                VoicePolicyComboBox.SelectedValue = UserPolicies["VoicePolicy"];
-                ExternalAccessPolicyComboBox.SelectedValue = UserPolicies["ExternalAccessPolicy"];
-                HostedVoicemailPolicyComboBox.SelectedValue = UserPolicies["HostedVoicemailPolicy"];
-                MobilityPolicyComboBox.SelectedValue = UserPolicies["MobilityPolicy"];
+                TenantDialPlanComboBox.SelectedValue = UserPoliciesOfFoundUser["TenantDialPlan"];
+                HybridPstnSiteComboBox.SelectedValue = UserPoliciesOfFoundUser["HybridPstnSiteName"];
+                ConferencingPolicyComboBox.SelectedValue = UserPoliciesOfFoundUser["ConferencingPolicy"];
+                VoicePolicyComboBox.SelectedValue = UserPoliciesOfFoundUser["VoicePolicy"];
+                ExternalAccessPolicyComboBox.SelectedValue = UserPoliciesOfFoundUser["ExternalAccessPolicy"];
+                HostedVoicemailPolicyComboBox.SelectedValue = UserPoliciesOfFoundUser["HostedVoicemailPolicy"];
+                MobilityPolicyComboBox.SelectedValue = UserPoliciesOfFoundUser["MobilityPolicy"];
             }
 
             //select first value in comboboxes if the user policies are empty
             else
             {
+                TenantDialPlanComboBox.SelectedIndex = 0;
+                HybridPstnSiteComboBox.SelectedIndex = 0;
                 ConferencingPolicyComboBox.SelectedIndex = 0;
                 VoicePolicyComboBox.SelectedIndex = 0;
                 ExternalAccessPolicyComboBox.SelectedIndex = 0;
