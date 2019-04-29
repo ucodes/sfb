@@ -964,12 +964,12 @@ private static SecureString String2SecureString(string password)
                         if (AllowInternationalCheckBox.IsChecked == true)
                         {
                             result = PSExecute("Grant-CsDialoutPolicy -Identity '" + Identity + "'"
-                                + " -PolicyName '" + "tag:DialoutCPCandPSTNInternational");
+                                + " -PolicyName '" + "tag:DialoutCPCandPSTNInternational" + "'");
                         }
                         else
                         {
                             result = PSExecute("Grant-CsDialoutPolicy -Identity '" + Identity + "'"
-                                + " -PolicyName '" + "tag:DialoutCPCandPSTNDomestic");
+                                + " -PolicyName '" + "tag:DialoutCPCandPSTNDomestic" + "'");
                         }
 
                         if (result != null)
