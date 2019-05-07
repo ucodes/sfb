@@ -101,6 +101,57 @@ namespace SfBtool
 
             PowerShell powershell = PowerShell.Create();
             PSCommand command = new PSCommand();
+
+            try
+            {
+            // open the runspace (connect to local powershell)
+            runspace.Open();
+
+            // associate the runspace with powershell
+            powershell.Runspace = runspace;
+
+            // set PS execution policy to unrestricted for the session
+            command.AddCommand("Set-ExecutionPolicy");
+            command.AddParameter("ExecutionPolicy", "Unrestricted");
+            command.AddParameter("Scope", "CurrentUser");
+            command.AddParameter("Force");
+            powershell.Commands = command;
+
+            powershell.Invoke();
+
+            foreach (ErrorRecord current in powershell.Streams.Error)
+                {
+                    returnstring += "Set-ExecutionPolicy error_start\n";
+                    returnstring += "Exception: " + current.Exception.ToString() + "\n";
+                    returnstring += "Inner Exception: " + current.Exception.InnerException + "\n";
+                    returnstring += "Set-ExecutionPolicy error_end\n";
+                    ConnectionFlag = false;
+                    return;
+                }
+
+            // Importing module
+            powershell = PowerShell.Create();
+            command = new PSCommand();
+            command.AddCommand("Import-Module");
+            command.AddParameter("Name", "SkypeOnlineConnector");
+            powershell.Commands = command;
+            powershell.Runspace = runspace;
+
+            // invoke the powershell
+            powershell.Invoke();
+
+            foreach (ErrorRecord current in powershell.Streams.Error)
+            {
+                returnstring += "Import-Module error_start\n";
+                returnstring += "Exception: " + current.Exception.ToString() + "\n";
+                returnstring += "Inner Exception: " + current.Exception.InnerException + "\n";
+                returnstring += "Import-Module error_end\n";
+                ConnectionFlag = false;
+                return;
+            }
+
+            powershell = PowerShell.Create();
+            command = new PSCommand();
             command.AddCommand("New-CsOnlineSession");
          //  command.AddParameter("ConnectionUri", uri);
             command.AddParameter("Credential", creds);
@@ -117,19 +168,12 @@ namespace SfBtool
          //   command.AddParameter("SessionOption", sessionOption);
 
             powershell.Commands = command;
+            powershell.Runspace = runspace;
 
-            try
-            {
-                // open the runspace (connect to local powershell)
-                runspace.Open();
+            // invoke the powershell to obtain the results
+            Collection<PSSession> result = powershell.Invoke<PSSession>();
 
-                // associate the runspace with powershell
-                powershell.Runspace = runspace;
-
-                // invoke the powershell to obtain the results
-                Collection<PSSession> result = powershell.Invoke<PSSession>();
-
-                foreach (ErrorRecord current in powershell.Streams.Error)
+            foreach (ErrorRecord current in powershell.Streams.Error)
                 {
                     returnstring += "Creating new PSSession error_start\n";
                     returnstring += "Exception: " + current.Exception.ToString() + "\n";
@@ -139,31 +183,31 @@ namespace SfBtool
                     return;
                 }
 
-                //one PS sessions is expected
-                if (result.Count != 1)
+          //one PS sessions is expected
+            if (result.Count != 1)
                 {
                     returnstring += "Couldnt connect to SfBO or unexpected number " +
                         "of Remote Runspace connections returned" + "\n";
                     //throw new Exception("Unexpected number of Remote Runspace connections returned.");
                 }
 
-                else
+            else
                 {
                     AppendMainText("New-PSSession created. Importing PS session, wait..." + "\n");
                 }
 
-                // Set the runspace as a local variable on the runspace
-                powershell = PowerShell.Create();
-                command = new PSCommand();
-                command.AddCommand("Set-Variable");
-                command.AddParameter("Name", "ra");
-                command.AddParameter("Value", result[0]);
-                powershell.Commands = command;
-                powershell.Runspace = runspace;
+            // Set the runspace as a local variable on the runspace
+            powershell = PowerShell.Create();
+            command = new PSCommand();
+            command.AddCommand("Set-Variable");
+            command.AddParameter("Name", "ra");
+            command.AddParameter("Value", result[0]);
+            powershell.Commands = command;
+            powershell.Runspace = runspace;
 
-                powershell.Invoke();
+            powershell.Invoke();
 
-                foreach (ErrorRecord current in powershell.Streams.Error)
+            foreach (ErrorRecord current in powershell.Streams.Error)
                 {
                     returnstring += "Set-Variable error_start\n";
                     returnstring += "Exception: " + current.Exception.ToString() + "\n";
@@ -173,29 +217,7 @@ namespace SfBtool
                     return;
                 }
 
-                // set PS execution policy to unrestricted for the session
-                powershell = PowerShell.Create();
-                command = new PSCommand();
-                command.AddCommand("Set-ExecutionPolicy");
-                command.AddParameter("ExecutionPolicy", "Unrestricted");
-                command.AddParameter("Scope", "CurrentUser");
-                command.AddParameter("Force");
-                powershell.Commands = command;
-                powershell.Runspace = runspace;
-
-                powershell.Invoke();
-
-                foreach (ErrorRecord current in powershell.Streams.Error)
-                {
-                    returnstring += "Set-ExecutionPolicy error_start\n";
-                    returnstring += "Exception: " + current.Exception.ToString() + "\n";
-                    returnstring += "Inner Exception: " + current.Exception.InnerException + "\n";
-                    returnstring += "Set-ExecutionPolicy error_end\n";
-                    ConnectionFlag = false;
-                    return;
-                }
-
-                //  import Lync cmdlets from the remote server in the current local runspace (using Import-PSSession)
+            //  import Lync cmdlets from the remote server in the current local runspace (using Import-PSSession)
                 powershell = PowerShell.Create();
                 command = new PSCommand();
                 command.AddScript("Import-PSSession -Session $ra");
