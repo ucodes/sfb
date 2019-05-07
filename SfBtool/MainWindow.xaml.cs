@@ -710,7 +710,7 @@ private static SecureString String2SecureString(string password)
             }
 
             //check HybridPstnSite
-            if (HybridPstnSiteComboBox.SelectedValue != UserPoliciesOfFoundUser["HybridPstnSiteName"])
+            if (HybridPstnSiteComboBox.SelectedValue.ToString() != UserPoliciesOfFoundUser["HybridPstnSiteName"].ToString())
             {
                 ChangedAttr += "\nPstn Site from " + UserPoliciesOfFoundUser["HybridPstnSiteName"] +
                     " to " + HybridPstnSiteComboBox.SelectedValue + "\n";
@@ -718,7 +718,7 @@ private static SecureString String2SecureString(string password)
             }
 
             //check TenantDialPlan
-            if (TenantDialPlanComboBox.SelectedValue != UserPoliciesOfFoundUser["TenantDialPlan"])
+            if (TenantDialPlanComboBox.SelectedValue.ToString() != UserPoliciesOfFoundUser["TenantDialPlan"].ToString())
             {
                 ChangedAttr += "\nTenant Dial Plan from " + UserPoliciesOfFoundUser["TenantDialPlan"] +
                     " to " + TenantDialPlanComboBox.SelectedValue + "\n";
@@ -727,7 +727,7 @@ private static SecureString String2SecureString(string password)
 
 
             //check conf pol
-            if (ConferencingPolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["ConferencingPolicy"])
+            if (ConferencingPolicyComboBox.SelectedValue.ToString() != UserPoliciesOfFoundUser["ConferencingPolicy"].ToString())
             {
                 ChangedAttr += "\nConf policy from " + UserPoliciesOfFoundUser["ConferencingPolicy"] + 
                     " to " + ConferencingPolicyComboBox.SelectedValue + "\n";
@@ -735,7 +735,7 @@ private static SecureString String2SecureString(string password)
             }
 
             //voice pol
-            if (VoicePolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["VoicePolicy"])
+            if (VoicePolicyComboBox.SelectedValue.ToString() != UserPoliciesOfFoundUser["VoicePolicy"].ToString())
             {
                 ChangedAttr += "\nVoice policy from " + UserPoliciesOfFoundUser["VoicePolicy"] + 
                     " to " + VoicePolicyComboBox.SelectedValue + "\n";
@@ -743,7 +743,7 @@ private static SecureString String2SecureString(string password)
             }
 
             //ExternalAccess
-            if (ExternalAccessPolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["ExternalAccessPolicy"])
+            if (ExternalAccessPolicyComboBox.SelectedValue.ToString() != UserPoliciesOfFoundUser["ExternalAccessPolicy"].ToString())
             {
                 ChangedAttr += "\nExternal Access policy from " + UserPoliciesOfFoundUser["ExternalAccessPolicy"] + 
                     " to " + ExternalAccessPolicyComboBox.SelectedValue + "\n";
@@ -751,7 +751,7 @@ private static SecureString String2SecureString(string password)
             }
 
             //HostedVM
-            if (HostedVoicemailPolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["HostedVoicemailPolicy"])
+            if (HostedVoicemailPolicyComboBox.SelectedValue.ToString() != UserPoliciesOfFoundUser["HostedVoicemailPolicy"].ToString())
             {
                 ChangedAttr += "\nHosted VM policy from " + UserPoliciesOfFoundUser["HostedVoicemailPolicy"] + 
                     " to " + HostedVoicemailPolicyComboBox.SelectedValue + "\n";
@@ -759,7 +759,7 @@ private static SecureString String2SecureString(string password)
             }
 
             //mobility pol
-            if (MobilityPolicyComboBox.SelectedValue != UserPoliciesOfFoundUser["MobilityPolicy"])
+            if (MobilityPolicyComboBox.SelectedValue.ToString() != UserPoliciesOfFoundUser["MobilityPolicy"].ToString())
             {
                 ChangedAttr += "\nMobility policy from " + UserPoliciesOfFoundUser["MobilityPolicy"] +
                     " to " + MobilityPolicyComboBox.SelectedValue + "\n";
